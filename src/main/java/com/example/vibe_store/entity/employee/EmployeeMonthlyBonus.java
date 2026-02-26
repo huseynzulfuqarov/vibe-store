@@ -1,12 +1,12 @@
-package com.example.vibe_store.entity;
+package com.example.vibe_store.entity.employee;
 
+import com.example.vibe_store.entity.grade.Grade;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDate;
 
@@ -15,25 +15,19 @@ import java.time.LocalDate;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "stores")
-public class Store {
+@Table(name = "employee_monthly_bonuses")
+public class EmployeeMonthlyBonus {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(nullable = false, length = 50)
-    private String name;
-
-    @Column(length = 50)
-    private String location;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Warehouse warehouse;
+    private Grade grade;
 
     @CreationTimestamp
-    private LocalDate creationDate;
+    private LocalDate assignDate;
 
-    @UpdateTimestamp
-    private LocalDate lastUpdate;
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Employee employee;
 }

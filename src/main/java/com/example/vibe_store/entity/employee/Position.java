@@ -1,4 +1,4 @@
-package com.example.vibe_store.entity;
+package com.example.vibe_store.entity.employee;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -6,20 +6,18 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDate;
-
 @Entity
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "employee_monthly_bonuses")
-public class EmployeeMonthlyBonuse {
+@Table(name = "positions")
+public class Position {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
+    @Column(nullable = false, unique = true, length = 50)
     private String name;
-    private LocalDate assignDatep;
 }

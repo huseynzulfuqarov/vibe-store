@@ -1,5 +1,6 @@
-package com.example.vibe_store.entity;
+package com.example.vibe_store.entity.employee;
 
+import com.example.vibe_store.entity.Store;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,7 +8,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Getter
@@ -19,7 +21,7 @@ public class EmployeeWorkHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Employee employee;
@@ -31,12 +33,12 @@ public class EmployeeWorkHistory {
     private Position position;
 
     @Column(nullable = false)
-    private float salary;
+    private BigDecimal salary;
 
     @CreationTimestamp
-    private LocalDateTime startDate;
+    private LocalDate startDate;
 
-    private LocalDateTime endDate;
+    private LocalDate endDate;
 
     @Column(nullable = false)
     private Boolean isActive;

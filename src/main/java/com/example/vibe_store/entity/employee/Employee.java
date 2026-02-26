@@ -1,4 +1,4 @@
-package com.example.vibe_store.entity;
+package com.example.vibe_store.entity.employee;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -16,7 +16,7 @@ public class Employee {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(length = 50, nullable = false)
     private String name;

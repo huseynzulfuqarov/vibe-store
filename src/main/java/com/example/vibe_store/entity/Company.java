@@ -8,8 +8,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.util.Date;
-import java.util.List;
+import java.time.LocalDate;
 
 @Entity
 @Getter
@@ -21,20 +20,17 @@ public class Company {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(nullable = false, length = 50)
     private String companyName;
-
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "company")
-    private List<Warehouse> warehouses;
 
     @Column(length = 50)
     private String location;
 
     @CreationTimestamp
-    private Date creationDate;
+    private LocalDate creationDate;
 
     @UpdateTimestamp
-    private Date lastUpdate;
+    private LocalDate lastUpdate;
 }

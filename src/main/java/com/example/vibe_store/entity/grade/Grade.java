@@ -1,4 +1,4 @@
-package com.example.vibe_store.entity;
+package com.example.vibe_store.entity.grade;
 
 import com.example.vibe_store.enums.GradeType;
 import jakarta.persistence.*;
@@ -20,7 +20,7 @@ public class Grade {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -34,7 +34,4 @@ public class Grade {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
-
-
-
 }

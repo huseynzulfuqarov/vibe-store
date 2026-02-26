@@ -8,8 +8,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.util.ArrayList;
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 @Entity
@@ -18,12 +17,11 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "warehouses")
-
 public class Warehouse {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
     @Column(nullable = false, length = 50)
     private String name;
@@ -31,15 +29,12 @@ public class Warehouse {
     @ManyToOne(fetch = FetchType.LAZY)
     private Company company;
 
-    @OneToMany(fetch = FetchType.LAZY, mappedBy = "warehouse")
-    List<Store> stores;
-
     @Column(length = 50)
     private String location;
 
     @CreationTimestamp
-    private Date creationDate;
+    private LocalDate creationDate;
 
     @UpdateTimestamp
-    private Date lastUpdate;
+    private LocalDate lastUpdate;
 }
