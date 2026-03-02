@@ -1,6 +1,6 @@
 package com.example.vibe_store.controller;
 
-import com.example.vibe_store.dto.EmployeeCreateDTO;
+import com.example.vibe_store.dto.employee.CreateEmployeeRequestDto;
 import com.example.vibe_store.service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,7 +16,6 @@ public class EmployeeController {
     private final EmployeeService employeeService;
 
     @PostMapping("/create")
-    public void createEmployee(@RequestBody EmployeeCreateDTO employeeCreateDTO) {
-        employeeService.createEmployee(employeeCreateDTO);
+    public void createEmployee(@RequestBody CreateEmployeeRequestDto employeeCreateDTO) {
     }
 }
