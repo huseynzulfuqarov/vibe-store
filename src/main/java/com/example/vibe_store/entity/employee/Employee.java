@@ -19,8 +19,14 @@ public class Employee {
     private Integer id;
 
     @Column(length = 50, nullable = false)
-    private String name;
+    private String firstName;
+
+    @Column(length = 50, nullable = false)
+    private String lastName;
 
     @Column(nullable = false)
     private Byte age;
+
+    @Column(length = 50, unique = true)
+    private String email;
 }

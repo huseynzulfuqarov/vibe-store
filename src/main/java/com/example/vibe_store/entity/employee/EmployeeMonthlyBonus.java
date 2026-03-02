@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -23,11 +24,14 @@ public class EmployeeMonthlyBonus {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Grade grade;
-
-    @CreationTimestamp
-    private LocalDate assignDate;
+    private Employee employee;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Employee employee;
+    private Grade grade;
+
+    @Column(nullable = false)
+    private BigDecimal bonusAmount;
+
+    @CreationTimestamp
+    private LocalDate calculationTime;
 }

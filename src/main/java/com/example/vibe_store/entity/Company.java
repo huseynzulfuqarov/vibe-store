@@ -26,7 +26,7 @@ public class Company {
     private String companyName;
 
     @Column(length = 50)
-    private String location;
+    private String companyAddress;
 
     @CreationTimestamp
     private LocalDate creationDate;

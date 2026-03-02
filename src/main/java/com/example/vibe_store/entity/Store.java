@@ -23,10 +23,10 @@ public class Store {
     private Integer id;
 
     @Column(nullable = false, length = 50)
-    private String name;
+    private String storeName;
 
     @Column(length = 50)
-    private String location;
+    private String storeAddress;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Warehouse warehouse;

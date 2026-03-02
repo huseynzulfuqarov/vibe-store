@@ -27,7 +27,7 @@ public class Grade {
     private GradeType gradeType;
 
     @Column(nullable = false, length = 50)
-    private String name;
+    private String gradeName;
 
     @Column(nullable = false)
     private Boolean isActive;

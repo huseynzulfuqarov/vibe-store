@@ -19,5 +19,5 @@ public class Position {
     private Integer id;
 
     @Column(nullable = false, unique = true, length = 50)
-    private String name;
+    private String positionName;
 }

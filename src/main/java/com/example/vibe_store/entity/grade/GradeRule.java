@@ -1,6 +1,7 @@
 package com.example.vibe_store.entity.grade;
 
 import com.example.vibe_store.entity.employee.Position;
+import com.example.vibe_store.enums.TargetType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -24,17 +25,20 @@ public class GradeRule {
     @ManyToOne(fetch = FetchType.LAZY)
     private Grade grade;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TargetType targetType;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private Position position;
 
-    @Column(name = "min_amount")
-    private BigDecimal minAmount;
+    private BigDecimal minThreshold;
 
-    @Column(name = "max_amount")
-    private BigDecimal manAmount;
+    private BigDecimal maxThreshold;
+
+    private BigDecimal fixedAmount;
 
     private BigDecimal percentage;
 
-    @Column(name = "fixed_amount")
-    private BigDecimal fixedAmount;
+    private BigDecimal sharePercentage;
 }

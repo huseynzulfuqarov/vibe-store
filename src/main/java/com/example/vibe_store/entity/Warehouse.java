@@ -23,13 +23,13 @@ public class Warehouse {
     private Integer id;
 
     @Column(nullable = false, length = 50)
-    private String name;
+    private String warehouseName;
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Company company;
 
     @Column(length = 50)
-    private String location;
+    private String warehouseAddress;
 
     @CreationTimestamp
     private LocalDate creationDate;

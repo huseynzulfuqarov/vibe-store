@@ -1,6 +1,5 @@
 package com.example.vibe_store.entity.grade;
 
-import com.example.vibe_store.entity.employee.Employee;
 import com.example.vibe_store.entity.employee.Position;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

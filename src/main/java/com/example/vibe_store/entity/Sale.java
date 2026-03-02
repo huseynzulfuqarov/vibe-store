@@ -30,7 +30,7 @@ public class Sale {
     private Warehouse warehouse;
 
     @Column(nullable = false)
-    private BigDecimal amount;
+    private BigDecimal saleAmount;
 
     @CreationTimestamp
     private LocalDateTime salesAt;
