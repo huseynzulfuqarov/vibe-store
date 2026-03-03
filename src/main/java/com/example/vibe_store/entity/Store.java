@@ -8,7 +8,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -32,8 +32,8 @@ public class Store {
     private Warehouse warehouse;
 
     @CreationTimestamp
-    private LocalDate creationDate;
+    private LocalDateTime creationDate;
 
     @UpdateTimestamp
-    private LocalDate lastUpdate;
+    private LocalDateTime lastUpdate;
 }

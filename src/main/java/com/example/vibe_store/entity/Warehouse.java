@@ -26,6 +26,7 @@ public class Warehouse {
     private String warehouseName;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "company_id")
     private Company company;
 
     @Column(length = 50)

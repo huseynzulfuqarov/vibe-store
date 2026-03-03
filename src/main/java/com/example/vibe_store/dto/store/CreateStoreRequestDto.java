@@ -13,7 +13,7 @@ public class CreateStoreRequestDto {
     private String storeName;
 
     @NotBlank(message = "Store location bos ola bilmez")
-    private String location;
+    private String storeAddress;
 
     @NotNull(message = "Magaza hansisa anbara(WarehouseId) baglili olmalidir")
     private Integer warehouseId;

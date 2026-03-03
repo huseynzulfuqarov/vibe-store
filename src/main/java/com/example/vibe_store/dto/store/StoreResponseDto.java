@@ -3,14 +3,14 @@ package com.example.vibe_store.dto.store;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
 public class StoreResponseDto {
 
-    private String name;
-    private String location;
+    private String storeName;
+    private String storeAddress;
     private String warehouseName;
-    private LocalDate creationDate;
+    private LocalDateTime creationDate;
 }
