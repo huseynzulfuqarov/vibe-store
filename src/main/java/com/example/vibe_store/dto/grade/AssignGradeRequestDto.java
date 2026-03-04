@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,7 +22,7 @@ public class AssignGradeRequestDto {
     private List<Integer> positionIds;
 
     @NotNull(message = "Başlanğıc tarixi qeyd olunmalıdır")
-    private LocalDate startDate;
+    private LocalDateTime startDate;
 
     @NotNull(message = "Son tarixi qeyd olunmalıdır")
     private LocalDateTime endDate;

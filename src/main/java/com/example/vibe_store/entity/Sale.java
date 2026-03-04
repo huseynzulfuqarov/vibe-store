@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "sales")
 public class Sale {
@@ -25,9 +24,6 @@ public class Sale {
 
     @ManyToOne(fetch = FetchType.LAZY)
     private Store store;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    private Warehouse warehouse;
 
     @Column(nullable = false)
     private BigDecimal saleAmount;

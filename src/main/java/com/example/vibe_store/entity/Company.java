@@ -1,19 +1,17 @@
 package com.example.vibe_store.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "companies")
 public class Company {
@@ -25,12 +23,12 @@ public class Company {
     @Column(nullable = false, length = 50)
     private String companyName;
 
-    @Column(length = 50)
+    @Column(length = 250)
     private String companyAddress;
 
     @CreationTimestamp
-    private LocalDate creationDate;
+    private LocalDateTime creationDate;
 
     @UpdateTimestamp
-    private LocalDate lastUpdate;
+    private LocalDateTime lastUpdate;
 }

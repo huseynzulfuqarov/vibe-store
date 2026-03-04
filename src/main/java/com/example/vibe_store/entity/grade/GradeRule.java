@@ -3,7 +3,6 @@ package com.example.vibe_store.entity.grade;
 import com.example.vibe_store.entity.employee.Position;
 import com.example.vibe_store.enums.TargetType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,7 +12,6 @@ import java.math.BigDecimal;
 @Entity
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "grade_rules")
 public class GradeRule {

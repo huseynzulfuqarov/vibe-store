@@ -2,7 +2,6 @@ package com.example.vibe_store.entity.grade;
 
 import com.example.vibe_store.enums.GradeType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,7 +12,6 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "grades")
 public class Grade {

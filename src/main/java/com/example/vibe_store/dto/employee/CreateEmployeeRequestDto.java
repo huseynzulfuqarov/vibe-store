@@ -17,6 +17,7 @@ public class CreateEmployeeRequestDto {
     private String lastName;
 
     @Min(value = 18, message = "Yas 18 den kicik ola bilmez")
+    @Max(value = 65, message = "Yas 65 den cox ola bilmez")
     private Byte age;
 
     @NotBlank(message = "Email bos ola bilmez")

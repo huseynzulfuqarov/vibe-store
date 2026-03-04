@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 @Setter
 public class CreateSaleRequestDTO {
 
-    @NotNull(message = "@NotNull(bos ola bilmez")
+    @NotNull(message = "Store ID boş ola bilməz")
     private Integer storeId;
 
     @NotNull(message = "bos ola bilmez")

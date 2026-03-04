@@ -2,19 +2,17 @@ package com.example.vibe_store.entity.employee;
 
 import com.example.vibe_store.entity.Store;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "employee_work_histories")
 public class EmployeeWorkHistory {
@@ -36,9 +34,9 @@ public class EmployeeWorkHistory {
     private BigDecimal salary;
 
     @CreationTimestamp
-    private LocalDate startDate;
+    private LocalDateTime startDate;
 
-    private LocalDate endDate;
+    private LocalDateTime endDate;
 
     @Column(nullable = false)
     private Boolean isActive;

@@ -1,7 +1,6 @@
 package com.example.vibe_store.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,7 +12,6 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "stores")
 public class Store {
@@ -25,7 +23,7 @@ public class Store {
     @Column(nullable = false, length = 50)
     private String storeName;
 
-    @Column(length = 50)
+    @Column(length = 250)
     private String storeAddress;
 
     @ManyToOne(fetch = FetchType.LAZY)
