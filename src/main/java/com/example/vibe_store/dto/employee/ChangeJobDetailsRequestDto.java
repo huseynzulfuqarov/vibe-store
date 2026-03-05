@@ -8,18 +8,14 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class TransferEmployeeRequestDto {
+public class ChangeJobDetailsRequestDto {
 
     @NotNull(message = "Isci id-si bos ola bilmez")
     private Integer employeeId;
 
-    @NotNull(message = "Target store bos ola bilmez")
     private Integer targetStoreId;
-
-    @NotNull(message = "Target position bos ola bilmez")
     private Integer targetPositionId;
 
     @Min(value = 370, message = "Maaş az ola bilməz")
-    @NotNull(message = "Maas bos ola bilmez")
     private BigDecimal newSalary;
 }

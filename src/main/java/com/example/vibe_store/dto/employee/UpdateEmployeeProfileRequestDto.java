@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class UpdateEmployeeRequestDto {
+public class UpdateEmployeeProfileRequestDto {
 
     @Size(min = 4, max = 20, message = "Ad uzunlugu minimum 4, max 20 ola biler")
     private String firstName;

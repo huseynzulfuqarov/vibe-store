@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class CreateGradeRuleRequestDTO {
+public class GradeRuleRespondDTO {
 
     private Integer gradeId;
 

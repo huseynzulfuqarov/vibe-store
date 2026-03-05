@@ -1,11 +1,18 @@
 package com.example.vibe_store.service;
 
-import com.example.vibe_store.dto.employee.CreateEmployeeRequestDto;
-import com.example.vibe_store.dto.employee.EmployeeResponseDto;
-import com.example.vibe_store.dto.employee.TransferEmployeeRequestDto;
+import com.example.vibe_store.dto.employee.*;
 
 public interface EmployeeService {
 
-    EmployeeResponseDto createEmployee(CreateEmployeeRequestDto createEmployeeRequestDto);
-    void transferEmployee(TransferEmployeeRequestDto  transferEmployeeRequestDto);
+    PositionResponseDTO createPosition(CreatePositionRequestDTO requestDto);
+
+    AllEmployeeDetailsResponseDto hireEmployee(HireEmployeeRequestDto hireEmployeeRequestDto);
+
+    void changeJobDetails(ChangeJobDetailsRequestDto changeJobDetailsRequestDto);
+
+    EmployeeProfileResponseDTO updateEmployeeProfile(Integer employeeId, UpdateEmployeeProfileRequestDto requestDto);
+
+    AllEmployeeDetailsResponseDto getEmployeeById(Integer employeeId);
+
+    PositionResponseDTO getPositionById(Integer positionId);
 }

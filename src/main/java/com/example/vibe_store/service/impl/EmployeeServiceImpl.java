@@ -1,8 +1,6 @@
 package com.example.vibe_store.service.impl;
 
-import com.example.vibe_store.dto.employee.CreateEmployeeRequestDto;
-import com.example.vibe_store.dto.employee.EmployeeResponseDto;
-import com.example.vibe_store.dto.employee.TransferEmployeeRequestDto;
+import com.example.vibe_store.dto.employee.*;
 import com.example.vibe_store.entity.Store;
 import com.example.vibe_store.service.EmployeeService;
 import com.example.vibe_store.entity.employee.Employee;
@@ -18,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
@@ -29,17 +28,31 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final StoreRepository storeRepository;
     private final PositionRepository positionRepository;
     private final ModelMapper modelMapper;
-    
+
+    @Override
+    public PositionResponseDTO createPosition(CreatePositionRequestDTO requestDto) {
+        if (positionRepository.existsByPositionName(requestDto.getPositionName())) {
+            throw new IllegalArgumentException("Bu adda vəzifə artıq mövcuddur.");
+        }
+            Position position = modelMapper.map(requestDto, Position.class);
+            position = positionRepository.save(position);
+            return getPositionById(position.getId());
+    }
+
     @Override
     @Transactional
-    public EmployeeResponseDto createEmployee(CreateEmployeeRequestDto requestDto) {
+    public AllEmployeeDetailsResponseDto hireEmployee(HireEmployeeRequestDto requestDto) {
+
+        if (employeeRepository.existsByEmail(requestDto.getEmail())) {
+            throw new IllegalArgumentException("Bu e-mail ünvanı ilə artıq işçi mövcuddur!");
+        }
 
         Store store = storeRepository.findById(requestDto.getStoreId())
                 .orElseThrow(() -> new ResourceNotFoundException("Verilen id ile magaza tapilmadi: " + requestDto.getStoreId()));
-        
+
         Position position = positionRepository.findById(requestDto.getPositionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Verilen id ile pozisya tapilmadi: " + requestDto.getPositionId()));
-        
+
         Employee employee = modelMapper.map(requestDto, Employee.class);
         employeeRepository.save(employee);
 
@@ -50,19 +63,86 @@ public class EmployeeServiceImpl implements EmployeeService {
         workHistory.setSalary(requestDto.getSalary());
         workHistory.setIsActive(true);
 
-        employeeWorkHistoryRepository.save(workHistory);
+        employeeWorkHistoryRepository.saveAndFlush(workHistory);
 
         return getEmployeeById(employee.getId());
     }
 
-    private EmployeeResponseDto getEmployeeById(Integer employeeId) {
+    @Override
+    @Transactional
+    public void changeJobDetails(ChangeJobDetailsRequestDto requestDto) {
+        EmployeeWorkHistory oldWorkHistory = employeeWorkHistoryRepository.findByEmployeeIdAndIsActiveTrue(requestDto.getEmployeeId())
+                .orElseThrow(() -> new ResourceNotFoundException("İşçinin aktiv fəaliyyəti tapılmadı: " +  requestDto.getEmployeeId()));
+
+        Integer targetStoreId = requestDto.getTargetStoreId() != null ? requestDto.getTargetStoreId() : oldWorkHistory.getStore().getId();
+        Integer targetPositionId = requestDto.getTargetPositionId() != null ? requestDto.getTargetPositionId() : oldWorkHistory.getPosition().getId();
+        BigDecimal newSalary = requestDto.getNewSalary() != null ? requestDto.getNewSalary() : oldWorkHistory.getSalary();
+
+        boolean isStoreChanged = !oldWorkHistory.getStore().getId().equals(targetStoreId);
+        boolean isPositionChanged = !oldWorkHistory.getPosition().getId().equals(targetPositionId);
+        boolean isSalaryChanged = oldWorkHistory.getSalary().compareTo(newSalary) != 0;
+
+        if (!isStoreChanged && !isPositionChanged && !isSalaryChanged) {
+            throw new IllegalArgumentException("Dəyişiklik yoxdur! İşçi onsuz da qeyd edilən şərtlərlə işləyir.");
+        }
+
+        oldWorkHistory.setEndDate(LocalDateTime.now());
+        oldWorkHistory.setIsActive(false);
+        employeeWorkHistoryRepository.save(oldWorkHistory);
+
+        Store newStore = isStoreChanged ?
+                storeRepository.findById(targetStoreId).orElseThrow(() -> new ResourceNotFoundException("Yeni mağaza tapılmadı"))
+                : oldWorkHistory.getStore();
+
+        Position newPosition = isPositionChanged ?
+                positionRepository.findById(targetPositionId).orElseThrow(() -> new ResourceNotFoundException("Yeni vəzifə tapılmadı"))
+                : oldWorkHistory.getPosition();
+
+        EmployeeWorkHistory newWorkHistory = new EmployeeWorkHistory();
+        newWorkHistory.setEmployee(oldWorkHistory.getEmployee());
+        newWorkHistory.setStore(newStore);
+        newWorkHistory.setPosition(newPosition);
+        newWorkHistory.setSalary(newSalary);
+        newWorkHistory.setIsActive(true);
+
+        employeeWorkHistoryRepository.save(newWorkHistory);
+    }
+
+    @Transactional
+    @Override
+    public EmployeeProfileResponseDTO updateEmployeeProfile(Integer employeeId, UpdateEmployeeProfileRequestDto requestDto) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("İşçi tapılmadı: " + employeeId));
+
+        // Null gələnlər köhnə dəyəri saxlayacaq, model mapper hell edir
+        modelMapper.map(requestDto, employee);
+
+        return modelMapper.map(employee, EmployeeProfileResponseDTO.class);
+    }
+
+    public AllEmployeeDetailsResponseDto getEmployeeById(Integer employeeId) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Verilen id ile isci tapilmadi: " + employeeId));
 
         EmployeeWorkHistory activeWorkHistory = employeeWorkHistoryRepository.findByEmployeeIdAndIsActiveTrue(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("İşçinin aktiv fəaliyyət tarixçəsi tapılmadı!"));
 
-        EmployeeResponseDto responseDto = new EmployeeResponseDto();
+        return getAllEmployeeDetailsResponseDto(employee, activeWorkHistory);
+    }
+
+    @Override
+    public PositionResponseDTO getPositionById(Integer positionId) {
+        Position position = positionRepository.findById(positionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Axtarilan id li posisya tapilmadi: " + positionId));
+        PositionResponseDTO responseDTO = new PositionResponseDTO();
+        responseDTO.setPositionId(position.getId());
+        responseDTO.setPositionName(position.getPositionName());
+        return responseDTO;
+    }
+
+    //======= HELPER METHOD =======
+    private AllEmployeeDetailsResponseDto getAllEmployeeDetailsResponseDto(Employee employee, EmployeeWorkHistory activeWorkHistory) {
+        AllEmployeeDetailsResponseDto responseDto = new AllEmployeeDetailsResponseDto();
 
         responseDto.setFirstName(employee.getFirstName());
         responseDto.setLastName(employee.getLastName());
@@ -74,37 +154,5 @@ public class EmployeeServiceImpl implements EmployeeService {
         responseDto.setCurrentStoreName(activeWorkHistory.getStore().getStoreName());
         responseDto.setCurrentPositionName(activeWorkHistory.getPosition().getPositionName());
         return responseDto;
-    }
-
-    @Override
-    @Transactional
-    public void transferEmployee(TransferEmployeeRequestDto requestDto) {
-        EmployeeWorkHistory oldWorkHistory = employeeWorkHistoryRepository.findByEmployeeIdAndIsActiveTrue(requestDto.getEmployeeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Transfer üçün verilən id-li işçinin aktiv fəaliyyəti tapılmadı: " +  requestDto.getEmployeeId()));
-
-        boolean isStoreChanged = !oldWorkHistory.getStore().getId().equals(requestDto.getTargetStoreId());
-        boolean isPositionChanged = !oldWorkHistory.getPosition().getId().equals(requestDto.getTargetPositionId());
-        boolean isSalaryChanged = oldWorkHistory.getSalary().compareTo(requestDto.getNewSalary()) != 0;
-
-        if (!isStoreChanged && !isPositionChanged && !isSalaryChanged) {
-            throw new IllegalArgumentException("Dəyişiklik yoxdur! İşçi onsuz da eyni vəzifədə, eyni mağazada və eyni maaşla işləyir.");
-        }
-
-        oldWorkHistory.setEndDate(LocalDateTime.now());
-        oldWorkHistory.setIsActive(false);
-        employeeWorkHistoryRepository.save(oldWorkHistory);
-
-        Employee employee = oldWorkHistory.getEmployee();
-        Store newStore = oldWorkHistory.getStore();
-        Position newPosition = oldWorkHistory.getPosition();
-
-        EmployeeWorkHistory newWorkHistory = new EmployeeWorkHistory();
-        newWorkHistory.setEmployee(employee);
-        newWorkHistory.setStore(newStore);
-        newWorkHistory.setPosition(newPosition);
-        newWorkHistory.setSalary(requestDto.getNewSalary());
-        newWorkHistory.setIsActive(true);
-
-        employeeWorkHistoryRepository.save(newWorkHistory);
     }
 }

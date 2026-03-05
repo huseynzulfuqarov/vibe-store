@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class EmployeeResponseDto {
+public class AllEmployeeDetailsResponseDto {
     private String firstName;
     private String lastName;
     private LocalDateTime hireDate;
