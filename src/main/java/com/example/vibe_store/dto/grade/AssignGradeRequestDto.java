@@ -19,8 +19,6 @@ public class AssignGradeRequestDto {
 
     private List<Integer> employeeIds;
 
-    private List<Integer> positionIds;
-
     @NotNull(message = "Başlanğıc tarixi qeyd olunmalıdır")
     private LocalDateTime startDate;
 

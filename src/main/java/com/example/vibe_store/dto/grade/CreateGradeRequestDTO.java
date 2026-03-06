@@ -23,5 +23,5 @@ public class CreateGradeRequestDTO {
 
     @Valid
     @NotNull(message = "Grade üçün ən azı bir qayda (Rule) göndərilməlidir")
-    private List<GradeRuleDto> rules;
+    private List<CreateGradeRuleRequestDto> rules;
 }

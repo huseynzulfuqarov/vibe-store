@@ -6,7 +6,7 @@ public interface GradeService {
 
     GradeRespondDTO createGrade(CreateGradeRequestDTO requestDTO);
 
-    GradeRuleRespondDTO createGradeRule(CreateGradeRuleRequestDto requestDTO);
+    GradeRuleRespondDTO createGradeRule(Integer gradeId, CreateGradeRuleRequestDto requestDTO);
 
     void assignGradeRule(AssignGradeRequestDto requestDTO);
 
