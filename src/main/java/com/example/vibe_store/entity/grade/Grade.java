@@ -24,7 +24,7 @@ public class Grade {
     @Column(nullable = false)
     private GradeType gradeType;
 
-    @Column(nullable = false, length = 50)
+    @Column(nullable = false, length = 50, unique = true)
     private String gradeName;
 
     @Column(nullable = false)

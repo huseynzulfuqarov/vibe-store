@@ -68,7 +68,6 @@ public class GradeServiceImpl implements GradeService {
     @Override
     @Transactional
     public GradeRuleRespondDTO createGradeRule(Integer gradeId, CreateGradeRuleRequestDto requestDTO){
-        GradeRule newGradeRule = new GradeRule();
 
         Grade grade = gradeRepository.findById(gradeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Grade tapılmadı: " + gradeId));
@@ -158,8 +157,11 @@ public class GradeServiceImpl implements GradeService {
         respondDTO.setMinThreshold(savedRule.getMinThreshold());
         respondDTO.setMaxThreshold(savedRule.getMaxThreshold());
         respondDTO.setFixedAmount(savedRule.getFixedAmount());
-        respondDTO.setPercentage(savedRule.getPercentage() != null ? savedRule.getPercentage().doubleValue() : null);
+        respondDTO.setPercentage(savedRule.getPercentage());
         respondDTO.setSharePercentage(savedRule.getSharePercentage());
+        respondDTO.setTargetType(savedRule.getTargetType());
+        respondDTO.setPositionName(savedRule.getPosition() != null
+                ? savedRule.getPosition().getPositionName() : null);
         return respondDTO;
     }
 }
