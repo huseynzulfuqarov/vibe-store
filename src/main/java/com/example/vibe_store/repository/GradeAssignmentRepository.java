@@ -21,4 +21,16 @@ public interface GradeAssignmentRepository extends JpaRepository<GradeAssignment
             @Param("startOfMonth") LocalDateTime startOfMonth,
             @Param("endOfMonth") LocalDateTime endOfMonth
     );
+
+    @Query("SELECT ga FROM GradeAssignment ga " +
+            "JOIN GradedEmployee ge ON ge.gradeAssignment.id = ga.id " +
+            "WHERE ga.store IS NULL " +
+            "AND ge.employee.id = :employeeId " +
+            "AND ga.isActive = true " +
+            "AND ga.endDate >= :startOfMonth AND ga.endDate <= :endOfMonth")
+    List<GradeAssignment> findStoreNullByEmployeeAndMonth(
+            @Param("employeeId") Integer employeeId,
+            @Param("startOfMonth") LocalDateTime startOfMonth,
+            @Param("endOfMonth") LocalDateTime endOfMonth
+    );
 }
