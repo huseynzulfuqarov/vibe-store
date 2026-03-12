@@ -1,12 +1,14 @@
 package com.example.vibe_store.service;
 
-import java.math.BigDecimal;
+import com.example.vibe_store.dto.payroll.BonusDetail;
+
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Map;
 
 public interface BonusCalculationService {
 
-        Map<Integer, BigDecimal> calculateBonusWithStore(Integer storeId, YearMonth targetMonth);
+        Map<Integer, List<BonusDetail>> calculateBonusWithStore(Integer storeId, YearMonth targetMonth);
 
-        BigDecimal calculateBonusForEmployeeWithoutStore(Integer employeeId, YearMonth targetMonth);
+        Map<Integer, List<BonusDetail>> calculateBonusWithoutStore(List<Integer> employeeIds, YearMonth targetMonth);
 }

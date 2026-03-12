@@ -1,5 +1,6 @@
 package com.example.vibe_store.service.impl;
 
+import com.example.vibe_store.dto.payroll.BonusDetail;
 import com.example.vibe_store.entity.employee.EmployeeWorkHistory;
 import com.example.vibe_store.entity.grade.GradeAssignment;
 import com.example.vibe_store.entity.grade.GradeRule;
@@ -29,7 +30,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
     private final GradeRuleRepository gradeRuleRepo;
     private final StoreRepository storeRepository;
 
-    public Map<Integer, BigDecimal> calculateBonusWithStore(Integer storeId, YearMonth targetMonth) {
+    public Map<Integer, List<BonusDetail>> calculateBonusWithStore(Integer storeId, YearMonth targetMonth) {
 
         storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("Mağaza tapılmadı: " + storeId));
 
@@ -42,7 +43,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
             return Collections.emptyMap();
         }
         //isci varsa yarad
-        Map<Integer, BigDecimal> employeeBonuses = new HashMap<>();
+        Map<Integer, List<BonusDetail>> employeeBonuses = new HashMap<>();
 
         List<GradeAssignment> assignments = gradeAssignmentRepo.findByStoreIdAndEndDateInTargetMonth(storeId, startOfMonth, endOfMonth);
 
@@ -173,9 +174,12 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                 }
 
                 if (bonusPerPerson.compareTo(BigDecimal.ZERO) > 0) {
+                    Integer gradeId = assignment.getGrade().getId();
+                    String gradeName = assignment.getGrade().getGradeName();
+
                     for (Integer empId : qualifiedIds) {
-                        BigDecimal current = employeeBonuses.getOrDefault(empId, BigDecimal.ZERO);
-                        employeeBonuses.put(empId, current.add(bonusPerPerson));
+                        employeeBonuses.computeIfAbsent(empId, k -> new ArrayList<>())
+                                .add(new BonusDetail(gradeId, gradeName, bonusPerPerson));
                     }
                 }
             }
@@ -184,71 +188,84 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
         return employeeBonuses;
     }
 
-    public BigDecimal calculateBonusForEmployeeWithoutStore(Integer employeeId, YearMonth targetMonth) {
+    public Map<Integer, List<BonusDetail>> calculateBonusWithoutStore(List<Integer> employeeIds, YearMonth targetMonth) {
 
         LocalDateTime startOfMonth = targetMonth.atDay(1).atStartOfDay();
         LocalDateTime endOfMonth = targetMonth.atEndOfMonth().atTime(23, 59, 59);
 
-        List<GradeAssignment> assignments = gradeAssignmentRepo.findStoreNullByEmployeeAndMonth(employeeId, startOfMonth, endOfMonth);
+        Map<Integer, List<BonusDetail>> employeeBonuses = new HashMap<>();
 
-        BigDecimal totalBonus = BigDecimal.ZERO;
+        for (Integer employeeId : employeeIds) {
 
-        EmployeeWorkHistory activeHistory = employeeWorkHistoryRepository.findByEmployeeIdAndIsActiveTrue(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("İşçinin aktiv iş tarixçəsi tapılmadı: " + employeeId));
+            List<GradeAssignment> assignments = gradeAssignmentRepo.findStoreNullByEmployeeAndMonth(employeeId, startOfMonth, endOfMonth);
 
-        Integer currentStoreId = activeHistory.getStore().getId();
+            if (assignments.isEmpty()) {
+                continue;
+            }
 
-        for (GradeAssignment assignment : assignments) {
+            EmployeeWorkHistory activeHistory = employeeWorkHistoryRepository.findByEmployeeIdAndIsActiveTrue(employeeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("İşçinin aktiv iş tarixçəsi tapılmadı: " + employeeId));
 
-            GradeType gradeType = assignment.getGrade().getGradeType();
-            List<GradeRule> rules = gradeRuleRepo.findAllByGradeId(assignment.getGrade().getId());
+            Integer currentStoreId = activeHistory.getStore().getId();
 
-            LocalDateTime gradeStart = assignment.getStartDate();
-            LocalDateTime gradeEnd = assignment.getEndDate();
+            for (GradeAssignment assignment : assignments) {
 
-            for (GradeRule rule : rules) {
+                GradeType gradeType = assignment.getGrade().getGradeType();
+                List<GradeRule> rules = gradeRuleRepo.findAllByGradeId(assignment.getGrade().getId());
 
-                //sehven yazilan STORE_TOTAL_SALES leri ignore et
-                if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) {
-                    continue;
-                }
+                LocalDateTime gradeStart = assignment.getStartDate();
+                LocalDateTime gradeEnd = assignment.getEndDate();
 
-                if (rule.getPosition() != null) {
-                    if (!activeHistory.getPosition().getId().equals(rule.getPosition().getId())) {
+                for (GradeRule rule : rules) {
+
+                    //sehven yazilan STORE_TOTAL_SALES leri ignore et
+                    if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) {
                         continue;
                     }
-                }
 
-                LocalDateTime effectiveStart;
-                if (gradeStart.isAfter(activeHistory.getStartDate())) {
-                    effectiveStart = gradeStart;
-                } else {
-                    effectiveStart = activeHistory.getStartDate();
-                }
-
-                BigDecimal employeeSales = saleRepo.getTotalSalesByEmployeeStoreAndDate(employeeId, currentStoreId, effectiveStart, gradeEnd);
-
-                if (!isInRange(employeeSales, rule)) {
-                    continue;
-                }
-
-                BigDecimal bonus = BigDecimal.ZERO;
-
-                if (gradeType == GradeType.FIXED_GRADE) {
-                    if (rule.getFixedAmount() != null) {
-                        bonus = rule.getFixedAmount();
+                    if (rule.getPosition() != null) {
+                        if (!activeHistory.getPosition().getId().equals(rule.getPosition().getId())) {
+                            continue;
+                        }
                     }
-                } else {
-                    if (rule.getPercentage() != null) {
-                        bonus = employeeSales.multiply(rule.getPercentage()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+                    LocalDateTime effectiveStart;
+                    if (gradeStart.isAfter(activeHistory.getStartDate())) {
+                        effectiveStart = gradeStart;
+                    } else {
+                        effectiveStart = activeHistory.getStartDate();
+                    }
+
+                    BigDecimal employeeSales = saleRepo.getTotalSalesByEmployeeStoreAndDate(employeeId, currentStoreId, effectiveStart, gradeEnd);
+
+                    if (!isInRange(employeeSales, rule)) {
+                        continue;
+                    }
+
+                    BigDecimal bonus = BigDecimal.ZERO;
+
+                    if (gradeType == GradeType.FIXED_GRADE) {
+                        if (rule.getFixedAmount() != null) {
+                            bonus = rule.getFixedAmount();
+                        }
+                    } else {
+                        if (rule.getPercentage() != null) {
+                            bonus = employeeSales.multiply(rule.getPercentage()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                        }
+                    }
+
+                    if (bonus.compareTo(BigDecimal.ZERO) > 0) {
+                        Integer gradeId = assignment.getGrade().getId();
+                        String gradeName = assignment.getGrade().getGradeName();
+
+                        employeeBonuses.computeIfAbsent(employeeId, k -> new ArrayList<>())
+                                .add(new BonusDetail(gradeId, gradeName, bonus));
                     }
                 }
-
-                totalBonus = totalBonus.add(bonus);
             }
         }
 
-        return totalBonus;
+        return employeeBonuses;
     }
 
     private boolean isInRange(BigDecimal sales, GradeRule rule) {

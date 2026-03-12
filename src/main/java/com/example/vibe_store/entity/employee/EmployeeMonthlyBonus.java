@@ -2,7 +2,6 @@ package com.example.vibe_store.entity.employee;
 
 import com.example.vibe_store.entity.grade.Grade;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -15,7 +14,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name = "employee_monthly_bonuses")
+@Table(name = "employee_monthly_bonuses",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "grade_id", "payroll_month"}))
 public class EmployeeMonthlyBonus {
 
     @Id
@@ -23,10 +23,15 @@ public class EmployeeMonthlyBonus {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "grade_id", nullable = false)
     private Grade grade;
+
+    @Column(name = "payroll_month", nullable = false, length = 7)
+    private String payrollMonth;
 
     @Column(nullable = false)
     private BigDecimal bonusAmount;

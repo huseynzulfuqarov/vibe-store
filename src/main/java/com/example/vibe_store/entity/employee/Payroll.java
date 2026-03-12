@@ -13,7 +13,8 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@Table(name = "payrolls")
+@Table(name = "payrolls",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "payroll_month"}))
 public class Payroll {
 
     @Id
@@ -23,6 +24,9 @@ public class Payroll {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
+
+    @Column(name = "payroll_month", nullable = false, length = 7)
+    private String payrollMonth;
 
     @Column(nullable = false)
     private BigDecimal baseSalary;
