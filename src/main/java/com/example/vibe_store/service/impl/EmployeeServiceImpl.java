@@ -11,7 +11,7 @@ import com.example.vibe_store.repository.EmployeeRepository;
 import com.example.vibe_store.repository.EmployeeWorkHistoryRepository;
 import com.example.vibe_store.repository.PositionRepository;
 import com.example.vibe_store.repository.StoreRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;

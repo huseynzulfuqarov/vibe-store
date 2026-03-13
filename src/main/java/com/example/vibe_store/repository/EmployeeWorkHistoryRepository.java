@@ -21,4 +21,7 @@ public interface EmployeeWorkHistoryRepository extends JpaRepository<EmployeeWor
             "WHERE ewh.employee.id = :employeeId " +
             "ORDER BY ewh.startDate DESC")
     List<EmployeeWorkHistory> findAllByEmployeeId(@Param("employeeId") Integer employeeId);
+
+    Optional<EmployeeWorkHistory> findByEmployeeIdAndStoreIdAndIsActiveTrue(Integer employeeId, Integer storeId);
+
 }

@@ -11,7 +11,7 @@ import com.example.vibe_store.exception.ResourceNotFoundException;
 import com.example.vibe_store.repository.*;
 import com.example.vibe_store.service.BonusCalculationService;
 import com.example.vibe_store.service.PayrollService;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -36,11 +36,17 @@ public class PayrollServiceImpl implements PayrollService {
     private final EmployeeMonthlyBonusRepository employeeMonthlyBonusRepository;
     private final BonusCalculationService bonusCalculationService;
 
-    private static final int STANDARD_DAYS_IN_MONTH = 31;
-
     @Override
     @Transactional
     public List<PayrollResponseDTO> calculatePayrollForStore(Integer storeId, YearMonth targetMonth) {
+
+        //test etmek ucun bu yoxlamani muveqqeti bagladiq
+
+       /* if (!targetMonth.isBefore(YearMonth.now())) {
+            throw new IllegalArgumentException("Yalnız başa çatmış aylar üçün maaş hesablana bilər.");
+        }*/
+
+        final int STANDARD_DAYS_IN_MONTH = targetMonth.lengthOfMonth();
 
         storeRepository.findById(storeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Mağaza tapılmadı: " + storeId));

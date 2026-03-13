@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Setter
 public class SaleResponseDTO {
 
-    private Integer saleId;
+    private Long saleId;
     private Integer employeeId;
     private Integer storeId;
     private BigDecimal saleAmount;

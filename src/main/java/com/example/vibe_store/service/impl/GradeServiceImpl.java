@@ -8,14 +8,17 @@ import com.example.vibe_store.entity.grade.Grade;
 import com.example.vibe_store.entity.grade.GradeAssignment;
 import com.example.vibe_store.entity.grade.GradeRule;
 import com.example.vibe_store.entity.grade.GradedEmployee;
+import com.example.vibe_store.enums.GradeType;
+import com.example.vibe_store.enums.TargetType;
 import com.example.vibe_store.exception.ResourceNotFoundException;
 import com.example.vibe_store.repository.*;
 import com.example.vibe_store.service.GradeService;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
@@ -45,6 +48,9 @@ public class GradeServiceImpl implements GradeService {
 
         if (requestDTO.getRules() != null && !requestDTO.getRules().isEmpty()) {
             for (CreateGradeRuleRequestDto ruleDto : requestDTO.getRules()) {
+
+                validateGradeRuleDependencies(requestDTO.getGradeType(), ruleDto);
+
                 GradeRule newRule = new GradeRule();
                 newRule.setGrade(savedGrade);
                 newRule.setTargetType(ruleDto.getTargetType());
@@ -67,7 +73,7 @@ public class GradeServiceImpl implements GradeService {
 
     @Override
     @Transactional
-    public GradeRuleRespondDTO createGradeRule(Integer gradeId, CreateGradeRuleRequestDto requestDTO){
+    public GradeRuleRespondDTO createGradeRule(Integer gradeId, CreateGradeRuleRequestDto requestDTO) {
 
         Grade grade = gradeRepository.findById(gradeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Grade tapılmadı: " + gradeId));
@@ -106,7 +112,7 @@ public class GradeServiceImpl implements GradeService {
         newGradeAssignment.setEndDate(requestDTO.getEndDate());
         newGradeAssignment.setIsActive(true);
 
-        if(requestDTO.getStoreId() != null) {
+        if (requestDTO.getStoreId() != null) {
             Store store = storeRepository.findById(requestDTO.getStoreId())
                     .orElseThrow(() -> new ResourceNotFoundException("store tapilmadi"));
 
@@ -123,8 +129,8 @@ public class GradeServiceImpl implements GradeService {
         GradeAssignment savedAssignment = gradeAssignmentRepository.save(newGradeAssignment);
 
 
-        if(requestDTO.getEmployeeIds() != null && !requestDTO.getEmployeeIds().isEmpty()) {
-            for(Integer employeeId : requestDTO.getEmployeeIds()) {
+        if (requestDTO.getEmployeeIds() != null && !requestDTO.getEmployeeIds().isEmpty()) {
+            for (Integer employeeId : requestDTO.getEmployeeIds()) {
                 Employee employee = employeeRepository.findById(employeeId)
                         .orElseThrow(() -> new ResourceNotFoundException("employee tapilmadi"));
 
@@ -163,5 +169,34 @@ public class GradeServiceImpl implements GradeService {
         respondDTO.setPositionName(savedRule.getPosition() != null
                 ? savedRule.getPosition().getPositionName() : null);
         return respondDTO;
+    }
+
+    private void validateGradeRuleDependencies(GradeType gradeType, CreateGradeRuleRequestDto ruleDto) {
+
+        if (gradeType == GradeType.FIXED_GRADE) {
+            if (ruleDto.getFixedAmount() == null || ruleDto.getFixedAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("FIXED_GRADE üçün 'fixedAmount' mütləq qeyd olunmalı və 0-dan böyük olmalıdır.");
+            }
+        } else if (gradeType == GradeType.PERCENT_GRADE || gradeType == GradeType.GRADE_THRESHOLD) {
+            if (ruleDto.getPercentage() == null || ruleDto.getPercentage().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException(gradeType + " tipi üçün 'percentage' mütləq qeyd olunmalıdır.");
+            }
+
+            if (ruleDto.getTargetType() == TargetType.STORE_TOTAL_SALES &&
+                    (ruleDto.getSharePercentage() == null || ruleDto.getSharePercentage().compareTo(BigDecimal.ZERO) <= 0)) {
+                throw new IllegalArgumentException("Mağazanın ümumi satışına görə bonus verilirsə, işçilər arası bölgü üçün 'sharePercentage' qeyd olunmalıdır.");
+            }
+        }
+
+        if (gradeType == GradeType.GRADE_THRESHOLD) {
+            if (ruleDto.getMinThreshold() == null && ruleDto.getMaxThreshold() == null) {
+                throw new IllegalArgumentException("GRADE_THRESHOLD üçün ən azı bir limit (minThreshold və ya maxThreshold) qeyd olunmalıdır.");
+            }
+
+            if (ruleDto.getMinThreshold() != null && ruleDto.getMaxThreshold() != null &&
+                    ruleDto.getMinThreshold().compareTo(ruleDto.getMaxThreshold()) >= 0) {
+                throw new IllegalArgumentException("'minThreshold' dəyəri 'maxThreshold'-dan kiçik olmalıdır.");
+            }
+        }
     }
 }

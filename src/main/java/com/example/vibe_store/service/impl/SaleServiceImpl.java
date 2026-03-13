@@ -7,6 +7,7 @@ import com.example.vibe_store.entity.Store;
 import com.example.vibe_store.entity.employee.Employee;
 import com.example.vibe_store.exception.ResourceNotFoundException;
 import com.example.vibe_store.repository.EmployeeRepository;
+import com.example.vibe_store.repository.EmployeeWorkHistoryRepository;
 import com.example.vibe_store.repository.SaleRepository;
 import com.example.vibe_store.repository.StoreRepository;
 import com.example.vibe_store.service.SaleService;
@@ -22,6 +23,7 @@ public class SaleServiceImpl implements SaleService {
     private final EmployeeRepository employeeRepository;
     private final StoreRepository storeRepository;
     private final ModelMapper modelMapper;
+    private final EmployeeWorkHistoryRepository workHistoryRepository;
 
     @Override
     public SaleResponseDTO createSale(CreateSaleRequestDTO requestDTO) {
@@ -32,6 +34,9 @@ public class SaleServiceImpl implements SaleService {
         Employee employee = employeeRepository.findById(requestDTO.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
+        workHistoryRepository.findByEmployeeIdAndStoreIdAndIsActiveTrue(requestDTO.getEmployeeId(), requestDTO.getStoreId())
+                .orElseThrow(() -> new IllegalArgumentException("This employee dont have active work history for this store"));
+
         Sale sale = modelMapper.map(requestDTO, Sale.class);
         sale.setStore(store);
         sale.setEmployee(employee);
@@ -40,6 +45,8 @@ public class SaleServiceImpl implements SaleService {
         SaleResponseDTO responseDTO = modelMapper.map(savedSale, SaleResponseDTO.class);
         responseDTO.setEmployeeId(savedSale.getEmployee().getId());
         responseDTO.setStoreId(savedSale.getStore().getId());
+        responseDTO.setSaleId(savedSale.getId());
+        responseDTO.setSaleDate(savedSale.getSalesAt());
 
         return responseDTO;
     }
