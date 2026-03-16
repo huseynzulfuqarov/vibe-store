@@ -81,4 +81,17 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(myErrorResponse, HttpStatus.BAD_REQUEST);
     }
+
+    @ExceptionHandler(AlreadyExistsException.class)
+    public ResponseEntity<MyErrorResponse> handleAlreadyExistsException(
+            AlreadyExistsException ex, HttpServletRequest request) {
+        MyErrorResponse response = MyErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error(HttpStatus.CONFLICT.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
 }

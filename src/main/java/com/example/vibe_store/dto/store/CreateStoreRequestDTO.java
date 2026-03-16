@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class CreateStoreRequestDto {
+public class CreateStoreRequestDTO {
 
     @NotBlank(message = "Store adi bos ola bilmez")
     private String storeName;

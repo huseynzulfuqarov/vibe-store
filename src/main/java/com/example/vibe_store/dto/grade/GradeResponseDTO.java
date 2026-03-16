@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class GradeRespondDTO {
+public class GradeResponseDTO {
     private Integer gradeId;
     private GradeType gradeType;
     private String gradeName;

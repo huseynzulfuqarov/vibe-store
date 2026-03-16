@@ -2,6 +2,7 @@ package com.example.vibe_store.service.impl;
 
 import com.example.vibe_store.dto.employee.*;
 import com.example.vibe_store.entity.Store;
+import com.example.vibe_store.exception.AlreadyExistsException;
 import com.example.vibe_store.service.EmployeeService;
 import com.example.vibe_store.entity.employee.Employee;
 import com.example.vibe_store.entity.employee.EmployeeWorkHistory;
@@ -41,7 +42,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional
-    public AllEmployeeDetailsResponseDto hireEmployee(HireEmployeeRequestDto requestDto) {
+    public AllEmployeeDetailsResponseDTO hireEmployee(HireEmployeeRequestDTO requestDto) {
 
         if (employeeRepository.existsByEmail(requestDto.getEmail())) {
             throw new IllegalArgumentException("Bu e-mail ünvanı ilə artıq işçi mövcuddur!");
@@ -70,7 +71,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional
-    public void changeJobDetails(ChangeJobDetailsRequestDto requestDto) {
+    public void changeJobDetails(ChangeJobDetailsRequestDTO requestDto) {
         EmployeeWorkHistory oldWorkHistory = employeeWorkHistoryRepository.findByEmployeeIdAndIsActiveTrue(requestDto.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException("İşçinin aktiv fəaliyyəti tapılmadı: " +  requestDto.getEmployeeId()));
 
@@ -110,17 +111,24 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Transactional
     @Override
-    public EmployeeProfileResponseDTO updateEmployeeProfile(Integer employeeId, UpdateEmployeeProfileRequestDto requestDto) {
+    public EmployeeProfileResponseDTO updateEmployeeProfile(Integer employeeId, UpdateEmployeeProfileRequestDTO requestDto) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("İşçi tapılmadı: " + employeeId));
 
+        if (requestDto.getEmail() != null && !requestDto.getEmail().equals(employee.getEmail())) {
+            if (employeeRepository.existsByEmail(requestDto.getEmail())) {
+                throw new AlreadyExistsException("Bu e-mail artıq istifadə olunur: " + requestDto.getEmail());
+            }
+        }
         // Null gələnlər köhnə dəyəri saxlayacaq, model mapper hell edir
         modelMapper.map(requestDto, employee);
 
-        return modelMapper.map(employee, EmployeeProfileResponseDTO.class);
+        Employee saved = employeeRepository.save(employee);
+
+        return modelMapper.map(saved, EmployeeProfileResponseDTO.class);
     }
 
-    public AllEmployeeDetailsResponseDto getEmployeeById(Integer employeeId) {
+    public AllEmployeeDetailsResponseDTO getEmployeeById(Integer employeeId) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Verilen id ile isci tapilmadi: " + employeeId));
 
@@ -141,8 +149,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     //======= HELPER METHOD =======
-    private AllEmployeeDetailsResponseDto getAllEmployeeDetailsResponseDto(Employee employee, EmployeeWorkHistory activeWorkHistory) {
-        AllEmployeeDetailsResponseDto responseDto = new AllEmployeeDetailsResponseDto();
+    private AllEmployeeDetailsResponseDTO getAllEmployeeDetailsResponseDto(Employee employee, EmployeeWorkHistory activeWorkHistory) {
+        AllEmployeeDetailsResponseDTO responseDto = new AllEmployeeDetailsResponseDTO();
 
         responseDto.setFirstName(employee.getFirstName());
         responseDto.setLastName(employee.getLastName());

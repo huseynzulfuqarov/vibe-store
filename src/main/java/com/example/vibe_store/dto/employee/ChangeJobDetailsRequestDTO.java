@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class ChangeJobDetailsRequestDto {
+public class ChangeJobDetailsRequestDTO {
 
     @NotNull(message = "Isci id-si bos ola bilmez")
     private Integer employeeId;

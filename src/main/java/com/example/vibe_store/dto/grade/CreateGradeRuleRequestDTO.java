@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class CreateGradeRuleRequestDto {
+public class CreateGradeRuleRequestDTO {
 
     private Integer positionId;
 

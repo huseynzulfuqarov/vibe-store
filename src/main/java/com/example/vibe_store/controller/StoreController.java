@@ -1,7 +1,7 @@
 package com.example.vibe_store.controller;
 
-import com.example.vibe_store.dto.store.CreateStoreRequestDto;
-import com.example.vibe_store.dto.store.StoreResponseDto;
+import com.example.vibe_store.dto.store.CreateStoreRequestDTO;
+import com.example.vibe_store.dto.store.StoreResponseDTO;
 import com.example.vibe_store.service.StoreService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,18 +19,18 @@ public class StoreController {
     private final StoreService storeService;
 
     @PostMapping
-    public ResponseEntity<StoreResponseDto> createStore(@Valid @RequestBody CreateStoreRequestDto requestDto){
-        StoreResponseDto response = storeService.createStore(requestDto);
+    public ResponseEntity<StoreResponseDTO> createStore(@Valid @RequestBody CreateStoreRequestDTO requestDto){
+        StoreResponseDTO response = storeService.createStore(requestDto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<StoreResponseDto> getStoreById(@PathVariable Integer id){
+    public ResponseEntity<StoreResponseDTO> getStoreById(@PathVariable Integer id){
         return new ResponseEntity<>(storeService.getStoreById(id), HttpStatus.OK);
     }
 
     @GetMapping
-    public ResponseEntity<List<StoreResponseDto>> getAllStores(){
+    public ResponseEntity<List<StoreResponseDTO>> getAllStores(){
         return new ResponseEntity<>(storeService.getAllStores(), HttpStatus.OK);
     }
 

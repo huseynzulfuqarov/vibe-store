@@ -1,7 +1,7 @@
 package com.example.vibe_store.service.impl;
 
-import com.example.vibe_store.dto.store.CreateStoreRequestDto;
-import com.example.vibe_store.dto.store.StoreResponseDto;
+import com.example.vibe_store.dto.store.CreateStoreRequestDTO;
+import com.example.vibe_store.dto.store.StoreResponseDTO;
 import com.example.vibe_store.entity.Store;
 import com.example.vibe_store.entity.Warehouse;
 import com.example.vibe_store.exception.ResourceNotFoundException;
@@ -23,27 +23,27 @@ public class StoreServiceImpl implements StoreService {
     private final ModelMapper modelMapper;
 
     @Override
-    public StoreResponseDto createStore(CreateStoreRequestDto requestDto) {
+    public StoreResponseDTO createStore(CreateStoreRequestDTO requestDto) {
         Warehouse warehouse = warehouseRepository.findById(requestDto.getWarehouseId())
                 .orElseThrow(() -> new ResourceNotFoundException("Göstərilən ID ilə anbar tapılmadı: " + requestDto.getWarehouseId()));
         Store store = new Store();
         modelMapper.map(requestDto, store);
         store.setWarehouse(warehouse);
-        return modelMapper.map(storeRepository.save(store), StoreResponseDto.class);
+        return modelMapper.map(storeRepository.save(store), StoreResponseDTO.class);
     }
 
     @Override
-    public StoreResponseDto getStoreById(Integer id) {
+    public StoreResponseDTO getStoreById(Integer id) {
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Göstərilən ID ilə mağaza tapılmadı: " + id));
-        return modelMapper.map(store, StoreResponseDto.class);
+        return modelMapper.map(store, StoreResponseDTO.class);
     }
 
     @Override
-    public List<StoreResponseDto> getAllStores() {
+    public List<StoreResponseDTO> getAllStores() {
         List<Store> stores = storeRepository.findAllWithWarehouse();
         return stores.stream()
-                .map(store -> modelMapper.map(store, StoreResponseDto.class))
+                .map(store -> modelMapper.map(store, StoreResponseDTO.class))
                 .toList();
     }
 

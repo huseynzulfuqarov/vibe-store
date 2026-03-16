@@ -9,7 +9,7 @@ import java.util.List;
 
 @Getter
 @Setter
-public class AssignGradeRequestDto {
+public class AssignGradeRequestDTO {
 
     @NotNull(message = "Grade ID mütləq göndərilməlidir")
     private Integer gradeId; //old garde ucun tarixi de servisde teyin et. ve false et

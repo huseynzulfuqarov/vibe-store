@@ -7,7 +7,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class UpdateEmployeeProfileRequestDto {
+public class UpdateEmployeeProfileRequestDTO {
 
     @Size(min = 4, max = 20, message = "Ad uzunlugu minimum 4, max 20 ola biler")
     private String firstName;
@@ -19,7 +19,6 @@ public class UpdateEmployeeProfileRequestDto {
     @Max(value = 65, message = "Yas 65 den cox ola bilmez")
     private Byte age;
 
-    @NotBlank(message = "bos ola bilmez")
     @Email(message = "email formati sehvdir")
     private String email;
 }

@@ -37,7 +37,7 @@ public class GradeServiceImpl implements GradeService {
 
     @Override
     @Transactional
-    public GradeRespondDTO createGrade(CreateGradeRequestDTO requestDTO) {
+    public GradeResponseDTO createGrade(CreateGradeRequestDTO requestDTO) {
         Grade newGrade = new Grade();
 
         newGrade.setGradeName(requestDTO.getGradeName());
@@ -47,7 +47,7 @@ public class GradeServiceImpl implements GradeService {
         Grade savedGrade = gradeRepository.save(newGrade);
 
         if (requestDTO.getRules() != null && !requestDTO.getRules().isEmpty()) {
-            for (CreateGradeRuleRequestDto ruleDto : requestDTO.getRules()) {
+            for (CreateGradeRuleRequestDTO ruleDto : requestDTO.getRules()) {
 
                 validateGradeRuleDependencies(requestDTO.getGradeType(), ruleDto);
 
@@ -73,10 +73,12 @@ public class GradeServiceImpl implements GradeService {
 
     @Override
     @Transactional
-    public GradeRuleRespondDTO createGradeRule(Integer gradeId, CreateGradeRuleRequestDto requestDTO) {
+    public GradeRuleRespondDTO createGradeRule(Integer gradeId, CreateGradeRuleRequestDTO requestDTO) {
 
         Grade grade = gradeRepository.findById(gradeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Grade tapılmadı: " + gradeId));
+
+        validateGradeRuleDependencies(grade.getGradeType(), requestDTO);
 
         GradeRule newRule = new GradeRule();
 
@@ -101,7 +103,7 @@ public class GradeServiceImpl implements GradeService {
 
     @Override
     @Transactional
-    public void assignGradeRule(AssignGradeRequestDto requestDTO) {
+    public void assignGradeRule(AssignGradeRequestDTO requestDTO) {
 
         Grade grade = gradeRepository.findById(requestDTO.getGradeId())
                 .orElseThrow(() -> new ResourceNotFoundException("grade tapilmadi"));
@@ -143,10 +145,10 @@ public class GradeServiceImpl implements GradeService {
     }
 
     @Override
-    public GradeRespondDTO getGradeById(Integer id) {
+    public GradeResponseDTO getGradeById(Integer id) {
         Grade grade = gradeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Grade not found with given id"));
-        return modelMapper.map(grade, GradeRespondDTO.class);
+        return modelMapper.map(grade, GradeResponseDTO.class);
     }
 
     @Override
@@ -171,7 +173,7 @@ public class GradeServiceImpl implements GradeService {
         return respondDTO;
     }
 
-    private void validateGradeRuleDependencies(GradeType gradeType, CreateGradeRuleRequestDto ruleDto) {
+    private void validateGradeRuleDependencies(GradeType gradeType, CreateGradeRuleRequestDTO ruleDto) {
 
         if (gradeType == GradeType.FIXED_GRADE) {
             if (ruleDto.getFixedAmount() == null || ruleDto.getFixedAmount().compareTo(BigDecimal.ZERO) <= 0) {

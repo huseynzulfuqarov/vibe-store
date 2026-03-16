@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class StoreResponseDto {
+public class StoreResponseDTO {
 
     private String storeName;
     private String storeAddress;

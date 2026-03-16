@@ -21,12 +21,12 @@ public class EmployeeController {
     }
 
     @PostMapping
-    public ResponseEntity<AllEmployeeDetailsResponseDto> hireEmployee(@RequestBody @Valid HireEmployeeRequestDto requestDto) {
+    public ResponseEntity<AllEmployeeDetailsResponseDTO> hireEmployee(@RequestBody @Valid HireEmployeeRequestDTO requestDto) {
         return new ResponseEntity<>(employeeService.hireEmployee(requestDto), HttpStatus.CREATED);
     }
 
     @PostMapping("/changeJobDetails")
-    public ResponseEntity<Void> changeJobDetails(@RequestBody @Valid ChangeJobDetailsRequestDto requestDto) {
+    public ResponseEntity<Void> changeJobDetails(@RequestBody @Valid ChangeJobDetailsRequestDTO requestDto) {
         employeeService.changeJobDetails(requestDto);
         return ResponseEntity.ok().build();
     }
@@ -34,12 +34,12 @@ public class EmployeeController {
     @PatchMapping("/{id}/profile")
     public ResponseEntity<EmployeeProfileResponseDTO> updateProfile(
             @PathVariable Integer id,
-            @Valid @RequestBody UpdateEmployeeProfileRequestDto requestDto) {
+            @Valid @RequestBody UpdateEmployeeProfileRequestDTO requestDto) {
         return new ResponseEntity<>(employeeService.updateEmployeeProfile(id, requestDto), HttpStatus.ACCEPTED);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<AllEmployeeDetailsResponseDto> getEmployeeById(@PathVariable Integer id) {
+    public ResponseEntity<AllEmployeeDetailsResponseDTO> getEmployeeById(@PathVariable Integer id) {
         return new  ResponseEntity<>(employeeService.getEmployeeById(id), HttpStatus.OK);
     }
 

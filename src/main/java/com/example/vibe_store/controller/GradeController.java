@@ -1,9 +1,9 @@
 package com.example.vibe_store.controller;
 
-import com.example.vibe_store.dto.grade.AssignGradeRequestDto;
+import com.example.vibe_store.dto.grade.AssignGradeRequestDTO;
 import com.example.vibe_store.dto.grade.CreateGradeRequestDTO;
-import com.example.vibe_store.dto.grade.CreateGradeRuleRequestDto;
-import com.example.vibe_store.dto.grade.GradeRespondDTO;
+import com.example.vibe_store.dto.grade.CreateGradeRuleRequestDTO;
+import com.example.vibe_store.dto.grade.GradeResponseDTO;
 import com.example.vibe_store.service.GradeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,26 +19,26 @@ public class GradeController {
     private final GradeService gradeService;
 
     @PostMapping
-    public ResponseEntity<Void> createGrade(@RequestBody @Valid CreateGradeRequestDTO requestDTO) {
-        gradeService.createGrade(requestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
+    public ResponseEntity<GradeResponseDTO> createGrade(@RequestBody @Valid CreateGradeRequestDTO requestDTO) {
+
+        return new ResponseEntity<>(gradeService.createGrade(requestDTO), HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<GradeRespondDTO> getGrade(@PathVariable Integer id) {
-       return new ResponseEntity<>(gradeService.getGradeById(id), HttpStatus.OK);
+    public ResponseEntity<GradeResponseDTO> getGrade(@PathVariable Integer id) {
+        return new ResponseEntity<>(gradeService.getGradeById(id), HttpStatus.OK);
     }
 
     @PostMapping("/{id}/rules")
     public ResponseEntity<Void> createGradeRule(
             @PathVariable Integer id,
-            @RequestBody @Valid CreateGradeRuleRequestDto requestDTO) {
+            @RequestBody @Valid CreateGradeRuleRequestDTO requestDTO) {
         gradeService.createGradeRule(id, requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PostMapping("/assign")
-    public ResponseEntity<Void> assignGrade(@RequestBody @Valid AssignGradeRequestDto requestDTO) {
+    public ResponseEntity<Void> assignGrade(@RequestBody @Valid AssignGradeRequestDTO requestDTO) {
         gradeService.assignGradeRule(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }

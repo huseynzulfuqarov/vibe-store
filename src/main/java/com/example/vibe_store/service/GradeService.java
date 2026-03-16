@@ -4,13 +4,13 @@ import com.example.vibe_store.dto.grade.*;
 
 public interface GradeService {
 
-    GradeRespondDTO createGrade(CreateGradeRequestDTO requestDTO);
+    GradeResponseDTO createGrade(CreateGradeRequestDTO requestDTO);
 
-    GradeRuleRespondDTO createGradeRule(Integer gradeId, CreateGradeRuleRequestDto requestDTO);
+    GradeRuleRespondDTO createGradeRule(Integer gradeId, CreateGradeRuleRequestDTO requestDTO);
 
-    void assignGradeRule(AssignGradeRequestDto requestDTO);
+    void assignGradeRule(AssignGradeRequestDTO requestDTO);
 
-    GradeRespondDTO getGradeById(Integer id);
+    GradeResponseDTO getGradeById(Integer id);
 
     GradeRuleRespondDTO  getGradeRuleById(Integer id);
 }

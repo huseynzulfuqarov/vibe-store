@@ -30,6 +30,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
     private final GradeRuleRepository gradeRuleRepo;
     private final StoreRepository storeRepository;
 
+    @Override
     public Map<Integer, List<BonusDetail>> calculateBonusWithStore(Integer storeId, YearMonth targetMonth) {
 
         storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("Mağaza tapılmadı: " + storeId));
@@ -188,6 +189,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
         return employeeBonuses;
     }
 
+    @Override
     public Map<Integer, List<BonusDetail>> calculateBonusWithoutStore(List<Integer> employeeIds, YearMonth targetMonth) {
 
         LocalDateTime startOfMonth = targetMonth.atDay(1).atStartOfDay();

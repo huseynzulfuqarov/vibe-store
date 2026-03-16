@@ -6,13 +6,13 @@ public interface EmployeeService {
 
     PositionResponseDTO createPosition(CreatePositionRequestDTO requestDto);
 
-    AllEmployeeDetailsResponseDto hireEmployee(HireEmployeeRequestDto hireEmployeeRequestDto);
+    AllEmployeeDetailsResponseDTO hireEmployee(HireEmployeeRequestDTO hireEmployeeRequestDto);
 
-    void changeJobDetails(ChangeJobDetailsRequestDto changeJobDetailsRequestDto);
+    void changeJobDetails(ChangeJobDetailsRequestDTO changeJobDetailsRequestDto);
 
-    EmployeeProfileResponseDTO updateEmployeeProfile(Integer employeeId, UpdateEmployeeProfileRequestDto requestDto);
+    EmployeeProfileResponseDTO updateEmployeeProfile(Integer employeeId, UpdateEmployeeProfileRequestDTO requestDto);
 
-    AllEmployeeDetailsResponseDto getEmployeeById(Integer employeeId);
+    AllEmployeeDetailsResponseDTO getEmployeeById(Integer employeeId);
 
     PositionResponseDTO getPositionById(Integer positionId);
 }
