@@ -89,20 +89,24 @@ public class PayrollServiceImpl implements PayrollService {
 
             if (activeStartDate.isAfter(monthStart) && !activeStartDate.isAfter(monthEnd)) {
 
-                long daysAtOldStore = ChronoUnit.DAYS.between(monthStart, activeStartDate);
-                long daysAtNewStore = STANDARD_DAYS_IN_MONTH - daysAtOldStore;
-
                 List<EmployeeWorkHistory> allHistories = workHistoryRepository.findAllByEmployeeId(employeeId);
 
                 BigDecimal oldSalary = BigDecimal.ZERO;
+                LocalDate effectiveOldStart = monthStart;
                 for (EmployeeWorkHistory h : allHistories) {
                     if (!h.getId().equals(activeHistory.getId())
                             && h.getEndDate() != null
                             && !h.getEndDate().toLocalDate().isBefore(monthStart)) {
                         oldSalary = h.getSalary();
+                        LocalDate oldHistoryStart = h.getStartDate().toLocalDate();
+                        effectiveOldStart = oldHistoryStart.isAfter(monthStart) ? oldHistoryStart : monthStart;
                         break;
                     }
                 }
+
+                long daysAtOldStore = ChronoUnit.DAYS.between(effectiveOldStart, activeStartDate);
+                long daysAtNewStore = ChronoUnit.DAYS.between(activeStartDate,
+                        targetMonth.atEndOfMonth().plusDays(1));
 
                 BigDecimal dailyOld = oldSalary.divide(BigDecimal.valueOf(STANDARD_DAYS_IN_MONTH), 2, RoundingMode.HALF_UP);
                 BigDecimal salaryOldPart = dailyOld.multiply(BigDecimal.valueOf(daysAtOldStore));
@@ -112,10 +116,16 @@ public class PayrollServiceImpl implements PayrollService {
 
                 totalBaseSalary = salaryOldPart.add(salaryNewPart).setScale(2, RoundingMode.HALF_UP);
 
-                details.append(String.format("Transfer olunub. Köhnə mağazada %d gün (%.2f AZN/gün = %.2f AZN), ",
-                        daysAtOldStore, dailyOld, salaryOldPart));
-                details.append(String.format("Yeni mağazada %d gün (%.2f AZN/gün = %.2f AZN). ",
-                        daysAtNewStore, dailyNew, salaryNewPart));
+                if (daysAtOldStore == 0) {
+                    details.append(String.format("Bu ay işə götürülüb və dərhal transfer edilib. " +
+                                    "Yeni mağazada %d gün (%.2f AZN/gün = %.2f AZN). ",
+                            daysAtNewStore, dailyNew, salaryNewPart));
+                } else {
+                    details.append(String.format("Transfer olunub. Köhnə mağazada %d gün (%.2f AZN/gün = %.2f AZN), ",
+                            daysAtOldStore, dailyOld, salaryOldPart));
+                    details.append(String.format("Yeni mağazada %d gün (%.2f AZN/gün = %.2f AZN). ",
+                            daysAtNewStore, dailyNew, salaryNewPart));
+                }
 
             } else if (activeStartDate.isAfter(monthEnd)) {
                 continue;
