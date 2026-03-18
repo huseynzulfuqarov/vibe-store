@@ -148,7 +148,9 @@ public class GradeServiceImpl implements GradeService {
     public GradeResponseDTO getGradeById(Integer id) {
         Grade grade = gradeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Grade not found with given id"));
-        return modelMapper.map(grade, GradeResponseDTO.class);
+        GradeResponseDTO responseDTO = modelMapper.map(grade, GradeResponseDTO.class);
+        responseDTO.setGradeId(grade.getId());
+        return responseDTO;
     }
 
     @Override
