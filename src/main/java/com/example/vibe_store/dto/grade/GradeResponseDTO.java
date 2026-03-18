@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -14,4 +15,5 @@ public class GradeResponseDTO {
     private String gradeName;
     private Boolean isActive;
     private LocalDateTime createdAt;
+    private List<GradeRuleRespondDTO> rules;
 }

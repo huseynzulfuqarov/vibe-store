@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -150,6 +152,13 @@ public class GradeServiceImpl implements GradeService {
                 .orElseThrow(() -> new ResourceNotFoundException("Grade not found with given id"));
         GradeResponseDTO responseDTO = modelMapper.map(grade, GradeResponseDTO.class);
         responseDTO.setGradeId(grade.getId());
+
+        List<GradeRule> rules = gradeRuleRepository.findAllByGradeId(id);
+        List<GradeRuleRespondDTO> ruleDtos = rules.stream()
+                .map(this::getGradeRuleRespondDTO)
+                .collect(Collectors.toList());
+        responseDTO.setRules(ruleDtos);
+
         return responseDTO;
     }
 
