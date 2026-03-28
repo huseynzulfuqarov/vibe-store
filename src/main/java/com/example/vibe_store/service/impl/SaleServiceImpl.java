@@ -29,13 +29,13 @@ public class SaleServiceImpl implements SaleService {
     public SaleResponseDTO createSale(CreateSaleRequestDTO requestDTO) {
 
         Store store = storeRepository.findById(requestDTO.getStoreId())
-                .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Store not found with ID: " + requestDTO.getStoreId()));
 
         Employee employee = employeeRepository.findById(requestDTO.getEmployeeId())
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + requestDTO.getEmployeeId()));
 
         workHistoryRepository.findByEmployeeIdAndStoreIdAndIsActiveTrue(requestDTO.getEmployeeId(), requestDTO.getStoreId())
-                .orElseThrow(() -> new IllegalArgumentException("This employee dont have active work history for this store"));
+                .orElseThrow(() -> new IllegalArgumentException("This employee does not have an active work history for this store"));
 
         Sale sale = modelMapper.map(requestDTO, Sale.class);
         sale.setStore(store);

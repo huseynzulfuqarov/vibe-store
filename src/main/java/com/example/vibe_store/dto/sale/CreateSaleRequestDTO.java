@@ -10,12 +10,12 @@ import java.math.BigDecimal;
 @Setter
 public class CreateSaleRequestDTO {
 
-    @NotNull(message = "Store ID boş ola bilməz")
+    @NotNull(message = "Store ID cannot be null")
     private Integer storeId;
 
-    @NotNull(message = "bos ola bilmez")
+    @NotNull(message = "Employee ID cannot be null")
     private Integer employeeId;
 
-    @NotNull(message = "bos ola bilmez")
+    @NotNull(message = "Sale amount cannot be null")
     private BigDecimal saleAmount;
 }

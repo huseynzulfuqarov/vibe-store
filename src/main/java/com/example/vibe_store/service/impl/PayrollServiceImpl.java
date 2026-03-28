@@ -40,23 +40,22 @@ public class PayrollServiceImpl implements PayrollService {
     @Transactional
     public List<PayrollResponseDTO> calculatePayrollForStore(Integer storeId, YearMonth targetMonth) {
 
-        //test etmek ucun bu yoxlamani muveqqeti bagladiq
-
+        // Temporary disabled for testing purposes
        /* if (!targetMonth.isBefore(YearMonth.now())) {
-            throw new IllegalArgumentException("Yalnız başa çatmış aylar üçün maaş hesablana bilər.");
+            throw new IllegalArgumentException("Payroll can only be calculated for completed months.");
         }*/
 
         final int STANDARD_DAYS_IN_MONTH = targetMonth.lengthOfMonth();
 
         storeRepository.findById(storeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Mağaza tapılmadı: " + storeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Store not found: " + storeId));
 
         String monthStr = targetMonth.toString();
 
         List<EmployeeWorkHistory> activeHistories = workHistoryRepository.findAllActiveByStoreId(storeId);
 
         if (activeHistories.isEmpty()) {
-            throw new ResourceNotFoundException("Bu mağazada aktiv işçi tapılmadı: " + storeId);
+            throw new ResourceNotFoundException("No active employees found for store: " + storeId);
         }
 
         List<Integer> employeeIds = activeHistories.stream()
@@ -74,7 +73,7 @@ public class PayrollServiceImpl implements PayrollService {
 
             if (payrollRepository.existsByEmployeeIdAndPayrollMonth(employeeId, monthStr)) {
                 Payroll existing = payrollRepository.findByEmployeeIdAndPayrollMonth(employeeId, monthStr)
-                        .orElseThrow(() -> new ResourceNotFoundException("Payroll tapılmadı"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Payroll not found"));
                 results.add(mapToResponseDTO(existing));
                 continue;
             }
@@ -93,10 +92,12 @@ public class PayrollServiceImpl implements PayrollService {
 
                 BigDecimal oldSalary = BigDecimal.ZERO;
                 LocalDate effectiveOldStart = monthStart;
+
                 for (EmployeeWorkHistory h : allHistories) {
                     if (!h.getId().equals(activeHistory.getId())
                             && h.getEndDate() != null
                             && !h.getEndDate().toLocalDate().isBefore(monthStart)) {
+
                         oldSalary = h.getSalary();
                         LocalDate oldHistoryStart = h.getStartDate().toLocalDate();
                         effectiveOldStart = oldHistoryStart.isAfter(monthStart) ? oldHistoryStart : monthStart;
@@ -117,13 +118,12 @@ public class PayrollServiceImpl implements PayrollService {
                 totalBaseSalary = salaryOldPart.add(salaryNewPart).setScale(2, RoundingMode.HALF_UP);
 
                 if (daysAtOldStore == 0) {
-                    details.append(String.format("Bu ay işə götürülüb və dərhal transfer edilib. " +
-                                    "Yeni mağazada %d gün (%.2f AZN/gün = %.2f AZN). ",
+                    details.append(String.format("Hired and transferred in the same month. %d days in new store (%.2f AZN/day = %.2f AZN). ",
                             daysAtNewStore, dailyNew, salaryNewPart));
                 } else {
-                    details.append(String.format("Transfer olunub. Köhnə mağazada %d gün (%.2f AZN/gün = %.2f AZN), ",
+                    details.append(String.format("Transferred. %d days in old store (%.2f AZN/day = %.2f AZN), ",
                             daysAtOldStore, dailyOld, salaryOldPart));
-                    details.append(String.format("Yeni mağazada %d gün (%.2f AZN/gün = %.2f AZN). ",
+                    details.append(String.format("%d days in new store (%.2f AZN/day = %.2f AZN). ",
                             daysAtNewStore, dailyNew, salaryNewPart));
                 }
 
@@ -132,7 +132,7 @@ public class PayrollServiceImpl implements PayrollService {
 
             } else {
                 totalBaseSalary = activeHistory.getSalary();
-                details.append(String.format("Tam ay işləyib. Maaş: %.2f AZN. ", totalBaseSalary));
+                details.append(String.format("Full month worked. Salary: %.2f AZN. ", totalBaseSalary));
             }
 
             BigDecimal bonusAmount = BigDecimal.ZERO;
@@ -148,7 +148,7 @@ public class PayrollServiceImpl implements PayrollService {
                         bonusDetail.getGradeName(), bonusDetail.getBonusAmount()));
 
                 Grade grade = gradeRepository.findById(bonusDetail.getGradeId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Grade tapılmadı: " + bonusDetail.getGradeId()));
+                        .orElseThrow(() -> new ResourceNotFoundException("Grade not found: " + bonusDetail.getGradeId()));
 
                 EmployeeMonthlyBonus monthlyBonus = new EmployeeMonthlyBonus();
                 monthlyBonus.setEmployee(employee);
@@ -160,7 +160,7 @@ public class PayrollServiceImpl implements PayrollService {
 
             BigDecimal totalAmount = totalBaseSalary.add(bonusAmount).setScale(2, RoundingMode.HALF_UP);
 
-            details.append(String.format("Ümumi: %.2f AZN (Maaş: %.2f + Bonus: %.2f)",
+            details.append(String.format("Total: %.2f AZN (Salary: %.2f + Bonus: %.2f)",
                     totalAmount, totalBaseSalary, bonusAmount));
 
             Payroll payroll = new Payroll();

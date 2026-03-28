@@ -8,6 +8,6 @@ import lombok.Setter;
 @Getter
 public class CreatePositionRequestDTO {
 
-    @NotBlank(message = "bos ola bilmez")
+    @NotBlank(message = "Position name cannot be blank")
     private String positionName;
 }

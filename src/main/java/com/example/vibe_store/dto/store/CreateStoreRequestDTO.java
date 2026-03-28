@@ -9,12 +9,12 @@ import lombok.Setter;
 @Setter
 public class CreateStoreRequestDTO {
 
-    @NotBlank(message = "Store adi bos ola bilmez")
+    @NotBlank(message = "Store name cannot be blank")
     private String storeName;
 
-    @NotBlank(message = "Store location bos ola bilmez")
+    @NotBlank(message = "Store address cannot be blank")
     private String storeAddress;
 
-    @NotNull(message = "Magaza hansisa anbara(WarehouseId) baglili olmalidir")
+    @NotNull(message = "Store must be linked to a warehouse (warehouseId)")
     private Integer warehouseId;
 }

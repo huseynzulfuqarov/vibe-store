@@ -14,14 +14,14 @@ import java.util.List;
 @Setter
 public class CreateGradeRequestDTO {
 
-    @NotBlank(message = "Grade adı boş ola bilməz")
-    @Size(min = 2, max = 50, message = "Ad 2-50 simvol arasında olmalıdır")
+    @NotBlank(message = "Grade name cannot be blank")
+    @Size(min = 2, max = 50, message = "Name must be between 2 and 50 characters")
     private String gradeName;
 
-    @NotNull(message = "Grade tipi seçilməlidir")
+    @NotNull(message = "Grade type must be selected")
     private GradeType gradeType;
 
     @Valid
-    @NotNull(message = "Grade üçün ən azı bir qayda (Rule) göndərilməlidir")
+    @NotNull(message = "At least one rule must be provided for the grade")
     private List<CreateGradeRuleRequestDTO> rules;
 }

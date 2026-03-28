@@ -11,17 +11,17 @@ import java.util.List;
 @Setter
 public class AssignGradeRequestDTO {
 
-    @NotNull(message = "Grade ID mütləq göndərilməlidir")
-    private Integer gradeId; //old garde ucun tarixi de servisde teyin et. ve false et
-                             //eger aktiv olan versa xeta versin
+    @NotNull(message = "Grade ID must be provided")
+    private Integer gradeId; // for old grade, set date in service and mark as inactive
+                             // if there is an active one, throw an error
 
     private Integer storeId;
 
     private List<Integer> employeeIds;
 
-    @NotNull(message = "Başlanğıc tarixi qeyd olunmalıdır")
+    @NotNull(message = "Start date must be provided")
     private LocalDateTime startDate;
 
-    @NotNull(message = "Son tarixi qeyd olunmalıdır")
+    @NotNull(message = "End date must be provided")
     private LocalDateTime endDate;
 }

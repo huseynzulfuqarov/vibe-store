@@ -33,7 +33,8 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
     @Override
     public Map<Integer, List<BonusDetail>> calculateBonusWithStore(Integer storeId, YearMonth targetMonth) {
 
-        storeRepository.findById(storeId).orElseThrow(() -> new ResourceNotFoundException("Mağaza tapılmadı: " + storeId));
+        storeRepository.findById(storeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Store not found: " + storeId));
 
         LocalDateTime startOfMonth = targetMonth.atDay(1).atStartOfDay();
         LocalDateTime endOfMonth = targetMonth.atEndOfMonth().atTime(23, 59, 59);
@@ -43,10 +44,12 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
         if (activeHistories.isEmpty()) {
             return Collections.emptyMap();
         }
-        //isci varsa yarad
+
+        // if employees exist, create a map for bonuses
         Map<Integer, List<BonusDetail>> employeeBonuses = new HashMap<>();
 
-        List<GradeAssignment> assignments = gradeAssignmentRepo.findByStoreIdAndEndDateInTargetMonth(storeId, startOfMonth, endOfMonth);
+        List<GradeAssignment> assignments = gradeAssignmentRepo
+                .findByStoreIdAndEndDateInTargetMonth(storeId, startOfMonth, endOfMonth);
 
         for (GradeAssignment assignment : assignments) {
 
@@ -71,11 +74,13 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                     }
                 }
             } else {
-                // FIXED_GRADE ve PERCENT_GRADE ucun eyni mentiqdir
+                // same logic for FIXED_GRADE and PERCENT_GRADE
                 storeTargetMet = true;
+
                 for (GradeRule rule : rules) {
                     if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) {
-                        if (rule.getMinThreshold() != null && storeTotalSales.compareTo(rule.getMinThreshold()) < 0) {
+                        if (rule.getMinThreshold() != null
+                                && storeTotalSales.compareTo(rule.getMinThreshold()) < 0) {
                             storeTargetMet = false;
                             break;
                         }
@@ -83,9 +88,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                 }
             }
 
-            if (!storeTargetMet) {
-                continue;
-            }
+            if (!storeTargetMet) continue;
 
             List<GradedEmployee> gradedEmployees = gradedEmployeeRepo.findAllByGradeAssignmentId(assignment.getId());
 
@@ -94,12 +97,14 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
             if (gradedEmployees.isEmpty()) {
                 eligibleEmployees = activeHistories;
             } else {
+
                 Set<Integer> specificIds = new HashSet<>();
+
                 for (GradedEmployee ge : gradedEmployees) {
                     specificIds.add(ge.getEmployee().getId());
                 }
 
-                //isci isden cixma ehtimali var, onda gore hemin id li isci helede isleyirmi?
+                // check if employee is still active (may have left the company)
                 for (EmployeeWorkHistory h : activeHistories) {
                     if (specificIds.contains(h.getEmployee().getId())) {
                         eligibleEmployees.add(h);
@@ -107,9 +112,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                 }
             }
 
-            if (eligibleEmployees.isEmpty()) {
-                continue;
-            }
+            if (eligibleEmployees.isEmpty()) continue;
 
             for (GradeRule rule : rules) {
 
@@ -131,6 +134,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                 List<Integer> qualifiedIds = new ArrayList<>();
 
                 for (EmployeeWorkHistory emp : targetEmployees) {
+
                     Integer empId = emp.getEmployee().getId();
                     BigDecimal salesToCheck;
 
@@ -166,20 +170,27 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                 } else {
                     if (rule.getPercentage() != null && rule.getSharePercentage() != null) {
 
-                        BigDecimal totalPool = storeTotalSales.multiply(rule.getPercentage()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                        BigDecimal totalPool = storeTotalSales
+                                .multiply(rule.getPercentage())
+                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
-                        BigDecimal groupPool = totalPool.multiply(rule.getSharePercentage()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                        BigDecimal groupPool = totalPool
+                                .multiply(rule.getSharePercentage())
+                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
-                        bonusPerPerson = groupPool.divide(BigDecimal.valueOf(qualifiedIds.size()), 2, RoundingMode.HALF_UP);
+                        bonusPerPerson = groupPool
+                                .divide(BigDecimal.valueOf(qualifiedIds.size()), 2, RoundingMode.HALF_UP);
                     }
                 }
 
                 if (bonusPerPerson.compareTo(BigDecimal.ZERO) > 0) {
+
                     Integer gradeId = assignment.getGrade().getId();
                     String gradeName = assignment.getGrade().getGradeName();
 
                     for (Integer empId : qualifiedIds) {
-                        employeeBonuses.computeIfAbsent(empId, k -> new ArrayList<>())
+                        employeeBonuses
+                                .computeIfAbsent(empId, k -> new ArrayList<>())
                                 .add(new BonusDetail(gradeId, gradeName, bonusPerPerson));
                     }
                 }
@@ -199,14 +210,14 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
 
         for (Integer employeeId : employeeIds) {
 
-            List<GradeAssignment> assignments = gradeAssignmentRepo.findStoreNullByEmployeeAndMonth(employeeId, startOfMonth, endOfMonth);
+            List<GradeAssignment> assignments =
+                    gradeAssignmentRepo.findStoreNullByEmployeeAndMonth(employeeId, startOfMonth, endOfMonth);
 
-            if (assignments.isEmpty()) {
-                continue;
-            }
+            if (assignments.isEmpty()) continue;
 
-            EmployeeWorkHistory activeHistory = employeeWorkHistoryRepository.findByEmployeeIdAndIsActiveTrue(employeeId)
-                    .orElseThrow(() -> new ResourceNotFoundException("İşçinin aktiv iş tarixçəsi tapılmadı: " + employeeId));
+            EmployeeWorkHistory activeHistory = employeeWorkHistoryRepository
+                    .findByEmployeeIdAndIsActiveTrue(employeeId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Active work history not found for employee: " + employeeId));
 
             Integer currentStoreId = activeHistory.getStore().getId();
 
@@ -220,10 +231,8 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
 
                 for (GradeRule rule : rules) {
 
-                    //sehven yazilan STORE_TOTAL_SALES leri ignore et
-                    if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) {
-                        continue;
-                    }
+                    // ignore STORE_TOTAL_SALES rules for individual calculation
+                    if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) continue;
 
                     if (rule.getPosition() != null) {
                         if (!activeHistory.getPosition().getId().equals(rule.getPosition().getId())) {
@@ -238,11 +247,10 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                         effectiveStart = activeHistory.getStartDate();
                     }
 
-                    BigDecimal employeeSales = saleRepo.getTotalSalesByEmployeeStoreAndDate(employeeId, currentStoreId, effectiveStart, gradeEnd);
+                    BigDecimal employeeSales = saleRepo
+                            .getTotalSalesByEmployeeStoreAndDate(employeeId, currentStoreId, effectiveStart, gradeEnd);
 
-                    if (!isInRange(employeeSales, rule)) {
-                        continue;
-                    }
+                    if (!isInRange(employeeSales, rule)) continue;
 
                     BigDecimal bonus = BigDecimal.ZERO;
 
@@ -252,11 +260,13 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                         }
                     } else {
                         if (rule.getPercentage() != null) {
-                            bonus = employeeSales.multiply(rule.getPercentage()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                            bonus = employeeSales.multiply(rule.getPercentage())
+                                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
                         }
                     }
 
                     if (bonus.compareTo(BigDecimal.ZERO) > 0) {
+
                         Integer gradeId = assignment.getGrade().getId();
                         String gradeName = assignment.getGrade().getGradeName();
 

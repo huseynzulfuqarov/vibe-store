@@ -36,7 +36,6 @@ public class GradeServiceImpl implements GradeService {
     private final GradedEmployeeRepository gradedEmployeeRepository;
     private final ModelMapper modelMapper;
 
-
     @Override
     @Transactional
     public GradeResponseDTO createGrade(CreateGradeRequestDTO requestDTO) {
@@ -64,7 +63,7 @@ public class GradeServiceImpl implements GradeService {
 
                 if (ruleDto.getPositionId() != null) {
                     Position position = positionRepository.findById(ruleDto.getPositionId())
-                            .orElseThrow(() -> new ResourceNotFoundException("Vəzifə tapılmadı: " + ruleDto.getPositionId()));
+                            .orElseThrow(() -> new ResourceNotFoundException("Position not found: " + ruleDto.getPositionId()));
                     newRule.setPosition(position);
                 }
                 gradeRuleRepository.save(newRule);
@@ -78,7 +77,7 @@ public class GradeServiceImpl implements GradeService {
     public GradeRuleRespondDTO createGradeRule(Integer gradeId, CreateGradeRuleRequestDTO requestDTO) {
 
         Grade grade = gradeRepository.findById(gradeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Grade tapılmadı: " + gradeId));
+                .orElseThrow(() -> new ResourceNotFoundException("Grade not found: " + gradeId));
 
         validateGradeRuleDependencies(grade.getGradeType(), requestDTO);
 
@@ -92,12 +91,12 @@ public class GradeServiceImpl implements GradeService {
         newRule.setPercentage(requestDTO.getPercentage());
         newRule.setSharePercentage(requestDTO.getSharePercentage());
 
-
         if (requestDTO.getPositionId() != null) {
             Position position = positionRepository.findById(requestDTO.getPositionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Vəzifə tapılmadı: " + requestDTO.getPositionId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("Position not found: " + requestDTO.getPositionId()));
             newRule.setPosition(position);
         }
+
         GradeRule savedRule = gradeRuleRepository.save(newRule);
 
         return getGradeRuleRespondDTO(savedRule);
@@ -108,7 +107,7 @@ public class GradeServiceImpl implements GradeService {
     public void assignGradeRule(AssignGradeRequestDTO requestDTO) {
 
         Grade grade = gradeRepository.findById(requestDTO.getGradeId())
-                .orElseThrow(() -> new ResourceNotFoundException("grade tapilmadi"));
+                .orElseThrow(() -> new ResourceNotFoundException("Grade not found"));
 
         GradeAssignment newGradeAssignment = new GradeAssignment();
         newGradeAssignment.setGrade(grade);
@@ -118,7 +117,7 @@ public class GradeServiceImpl implements GradeService {
 
         if (requestDTO.getStoreId() != null) {
             Store store = storeRepository.findById(requestDTO.getStoreId())
-                    .orElseThrow(() -> new ResourceNotFoundException("store tapilmadi"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
 
             newGradeAssignment.setStore(store);
 
@@ -132,11 +131,10 @@ public class GradeServiceImpl implements GradeService {
 
         GradeAssignment savedAssignment = gradeAssignmentRepository.save(newGradeAssignment);
 
-
         if (requestDTO.getEmployeeIds() != null && !requestDTO.getEmployeeIds().isEmpty()) {
             for (Integer employeeId : requestDTO.getEmployeeIds()) {
                 Employee employee = employeeRepository.findById(employeeId)
-                        .orElseThrow(() -> new ResourceNotFoundException("employee tapilmadi"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
                 GradedEmployee gradedEmployee = new GradedEmployee();
                 gradedEmployee.setEmployee(employee);
@@ -150,13 +148,16 @@ public class GradeServiceImpl implements GradeService {
     public GradeResponseDTO getGradeById(Integer id) {
         Grade grade = gradeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Grade not found with given id"));
+
         GradeResponseDTO responseDTO = modelMapper.map(grade, GradeResponseDTO.class);
         responseDTO.setGradeId(grade.getId());
 
         List<GradeRule> rules = gradeRuleRepository.findAllByGradeId(id);
+
         List<GradeRuleRespondDTO> ruleDtos = rules.stream()
                 .map(this::getGradeRuleRespondDTO)
                 .collect(Collectors.toList());
+
         responseDTO.setRules(ruleDtos);
 
         return responseDTO;
@@ -170,8 +171,11 @@ public class GradeServiceImpl implements GradeService {
         return modelMapper.map(gradeRule, GradeRuleRespondDTO.class);
     }
 
+    // ================= HELPER =================
+
     private GradeRuleRespondDTO getGradeRuleRespondDTO(GradeRule savedRule) {
         GradeRuleRespondDTO respondDTO = new GradeRuleRespondDTO();
+
         respondDTO.setGradeId(savedRule.getGrade().getId());
         respondDTO.setMinThreshold(savedRule.getMinThreshold());
         respondDTO.setMaxThreshold(savedRule.getMaxThreshold());
@@ -179,6 +183,7 @@ public class GradeServiceImpl implements GradeService {
         respondDTO.setPercentage(savedRule.getPercentage());
         respondDTO.setSharePercentage(savedRule.getSharePercentage());
         respondDTO.setTargetType(savedRule.getTargetType());
+
         respondDTO.setPositionName(savedRule.getPosition() != null
                 ? savedRule.getPosition().getPositionName() : null);
         return respondDTO;
@@ -188,27 +193,27 @@ public class GradeServiceImpl implements GradeService {
 
         if (gradeType == GradeType.FIXED_GRADE) {
             if (ruleDto.getFixedAmount() == null || ruleDto.getFixedAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("FIXED_GRADE üçün 'fixedAmount' mütləq qeyd olunmalı və 0-dan böyük olmalıdır.");
+                throw new IllegalArgumentException("For FIXED_GRADE, 'fixedAmount' must be provided and greater than 0.");
             }
         } else if (gradeType == GradeType.PERCENT_GRADE || gradeType == GradeType.GRADE_THRESHOLD) {
             if (ruleDto.getPercentage() == null || ruleDto.getPercentage().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException(gradeType + " tipi üçün 'percentage' mütləq qeyd olunmalıdır.");
+                throw new IllegalArgumentException(gradeType + " requires a valid 'percentage' value.");
             }
 
             if (ruleDto.getTargetType() == TargetType.STORE_TOTAL_SALES &&
                     (ruleDto.getSharePercentage() == null || ruleDto.getSharePercentage().compareTo(BigDecimal.ZERO) <= 0)) {
-                throw new IllegalArgumentException("Mağazanın ümumi satışına görə bonus verilirsə, işçilər arası bölgü üçün 'sharePercentage' qeyd olunmalıdır.");
+                throw new IllegalArgumentException("When bonus is based on store total sales, 'sharePercentage' must be provided.");
             }
         }
 
         if (gradeType == GradeType.GRADE_THRESHOLD) {
             if (ruleDto.getMinThreshold() == null && ruleDto.getMaxThreshold() == null) {
-                throw new IllegalArgumentException("GRADE_THRESHOLD üçün ən azı bir limit (minThreshold və ya maxThreshold) qeyd olunmalıdır.");
+                throw new IllegalArgumentException("GRADE_THRESHOLD requires at least one limit (min or max threshold).");
             }
 
             if (ruleDto.getMinThreshold() != null && ruleDto.getMaxThreshold() != null &&
                     ruleDto.getMinThreshold().compareTo(ruleDto.getMaxThreshold()) >= 0) {
-                throw new IllegalArgumentException("'minThreshold' dəyəri 'maxThreshold'-dan kiçik olmalıdır.");
+                throw new IllegalArgumentException("'minThreshold' must be less than 'maxThreshold'.");
             }
         }
     }

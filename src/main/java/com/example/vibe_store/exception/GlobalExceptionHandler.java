@@ -44,7 +44,7 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Məlumatların validasiyası zamanı xəta baş verdi.")
+                .message("An error occurred during data validation.")
                 .validationErrors(errors)
                 .path(request.getRequestURI())
                 .build();
@@ -60,7 +60,7 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message("Sistemdə daxili xəta baş verdi: " + ex.getMessage())
+                .message("An internal system error occurred: " + ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
 
@@ -75,7 +75,7 @@ public class GlobalExceptionHandler {
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                .message("Bu adda detal və ya məlumat artıq mövcuddur.")
+                .message("A record or detail with this name already exists.")
                 .path(request.getRequestURI())
                 .build();
 

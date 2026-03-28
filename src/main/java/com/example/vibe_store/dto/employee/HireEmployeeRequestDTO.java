@@ -10,27 +10,27 @@ import java.math.BigDecimal;
 @Setter
 public class HireEmployeeRequestDTO {
 
-    @NotBlank(message = "Ad bos ola bilmez")
+    @NotBlank(message = "First name cannot be blank")
     private String firstName;
 
-    @NotBlank(message = "Soyad bos ola bilmez")
+    @NotBlank(message = "Last name cannot be blank")
     private String lastName;
 
-    @Min(value = 18, message = "Yas 18 den kicik ola bilmez")
-    @Max(value = 65, message = "Yas 65 den cox ola bilmez")
+    @Min(value = 18, message = "Age cannot be less than 18")
+    @Max(value = 65, message = "Age cannot be greater than 65")
     private Byte age;
 
-    @NotBlank(message = "Email bos ola bilmez")
-    @Email(message = "Düzgün email formatı daxil edin")
+    @NotBlank(message = "Email cannot be blank")
+    @Email(message = "Please enter a valid email format")
     private String email;
 
-    @NotNull(message = "Store bos ola bilmez")
+    @NotNull(message = "Store cannot be null")
     private Integer storeId;
 
-    @NotNull(message = "Posizya bos ola bilmez")
+    @NotNull(message = "Position cannot be null")
     private Integer positionId;
 
-    @NotNull(message = "Maas bos ola bilmez")
-    @Min(value = 370, message = "minimum maas 370 azn ola biler")
+    @NotNull(message = "Salary cannot be null")
+    @Min(value = 370, message = "Minimum salary is 370 AZN")
     private BigDecimal salary;
 }

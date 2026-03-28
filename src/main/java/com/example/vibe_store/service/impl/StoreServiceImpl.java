@@ -25,7 +25,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public StoreResponseDTO createStore(CreateStoreRequestDTO requestDto) {
         Warehouse warehouse = warehouseRepository.findById(requestDto.getWarehouseId())
-                .orElseThrow(() -> new ResourceNotFoundException("Göstərilən ID ilə anbar tapılmadı: " + requestDto.getWarehouseId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found with ID: " + requestDto.getWarehouseId()));
         Store store = new Store();
         modelMapper.map(requestDto, store);
         store.setWarehouse(warehouse);
@@ -35,7 +35,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     public StoreResponseDTO getStoreById(Integer id) {
         Store store = storeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Göstərilən ID ilə mağaza tapılmadı: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Store not found with ID: " + id));
         return modelMapper.map(store, StoreResponseDTO.class);
     }
 
@@ -49,8 +49,8 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public void deleteStore(Integer id) {
-        if(!storeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Silinmək üçün mağaza tapılmadı. ID: " + id);
+        if (!storeRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Store not found for deletion. ID: " + id);
         }
         storeRepository.deleteById(id);
     }

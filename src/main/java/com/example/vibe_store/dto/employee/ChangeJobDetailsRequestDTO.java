@@ -10,12 +10,12 @@ import java.math.BigDecimal;
 @Setter
 public class ChangeJobDetailsRequestDTO {
 
-    @NotNull(message = "Isci id-si bos ola bilmez")
+    @NotNull(message = "Employee ID cannot be empty")
     private Integer employeeId;
 
     private Integer targetStoreId;
     private Integer targetPositionId;
 
-    @Min(value = 370, message = "Maaş az ola bilməz")
+    @Min(value = 370, message = "Salary cannot be less than 370 azn")
     private BigDecimal newSalary;
 }

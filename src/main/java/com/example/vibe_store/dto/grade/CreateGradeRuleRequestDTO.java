@@ -14,7 +14,7 @@ public class CreateGradeRuleRequestDTO {
 
     private Integer positionId;
 
-    @NotNull(message = "Hədəf tipi (STORE_TARGET və ya EMPLOYEE_TARGET) seçilməlidir")
+    @NotNull(message = "Target type (STORE_TARGET or EMPLOYEE_TARGET) must be selected")
     private TargetType targetType;
 
     @PositiveOrZero

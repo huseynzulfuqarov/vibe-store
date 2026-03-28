@@ -18,5 +18,4 @@ public class AllEmployeeDetailsResponseDTO {
     private BigDecimal currentSalary;
     private String currentPositionName;
     private String currentStoreName;
-    //private String activeGradeName;
 }
