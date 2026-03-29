@@ -6,6 +6,7 @@ import com.example.vibe_store.entity.employee.Employee;
 import com.example.vibe_store.entity.employee.EmployeeMonthlyBonus;
 import com.example.vibe_store.entity.employee.EmployeeWorkHistory;
 import com.example.vibe_store.entity.employee.Payroll;
+import com.example.vibe_store.entity.Store;
 import com.example.vibe_store.entity.grade.Grade;
 import com.example.vibe_store.exception.ResourceNotFoundException;
 import com.example.vibe_store.repository.*;
@@ -18,12 +19,10 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -40,142 +39,180 @@ public class PayrollServiceImpl implements PayrollService {
     @Transactional
     public List<PayrollResponseDTO> calculatePayrollForStore(Integer storeId, YearMonth targetMonth) {
 
-        // Temporary disabled for testing purposes
-       /* if (!targetMonth.isBefore(YearMonth.now())) {
+    /*  Temporary disabled for testing purposes
+        if (!targetMonth.isBefore(YearMonth.now())) {
             throw new IllegalArgumentException("Payroll can only be calculated for completed months.");
         }*/
-
-        final int STANDARD_DAYS_IN_MONTH = targetMonth.lengthOfMonth();
 
         storeRepository.findById(storeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Store not found: " + storeId));
 
+        LocalDateTime monthStart = targetMonth.atDay(1).atStartOfDay();
+        LocalDateTime monthEnd   = targetMonth.atEndOfMonth().atTime(23, 59, 59);
         String monthStr = targetMonth.toString();
 
-        List<EmployeeWorkHistory> activeHistories = workHistoryRepository.findAllActiveByStoreId(storeId);
+        //target ayda bu magazada islemis ve ya hazirda isleyen butun isciler
+        List<EmployeeWorkHistory> histories =
+                workHistoryRepository.findAllWorkedInStoreAndMonth(storeId, monthStart, monthEnd);
 
-        if (activeHistories.isEmpty()) {
-            throw new ResourceNotFoundException("No active employees found for store: " + storeId);
+        if (histories.isEmpty()) {
+            throw new ResourceNotFoundException("No employees found for store: " + storeId);
         }
 
-        List<Integer> employeeIds = activeHistories.stream()
+        //bonus ucun ancaq aktiv isciler axtarilir
+        List<Integer> activeEmployeeIds = histories.stream()
+                .filter(EmployeeWorkHistory::getIsActive)
                 .map(h -> h.getEmployee().getId())
                 .toList();
 
         Map<Integer, List<BonusDetail>> storeBonuses = bonusCalculationService.calculateBonusWithStore(storeId, targetMonth);
-        Map<Integer, List<BonusDetail>> personalBonuses = bonusCalculationService.calculateBonusWithoutStore(employeeIds, targetMonth);
+        Map<Integer, List<BonusDetail>> personalBonuses = bonusCalculationService.calculateBonusWithoutStore(activeEmployeeIds, targetMonth);
 
         List<PayrollResponseDTO> results = new ArrayList<>();
 
-        for (EmployeeWorkHistory activeHistory : activeHistories) {
-            Employee employee = activeHistory.getEmployee();
+        for (EmployeeWorkHistory history : histories) {
+            Employee employee = history.getEmployee();
             Integer employeeId = employee.getId();
 
-            if (payrollRepository.existsByEmployeeIdAndPayrollMonth(employeeId, monthStr)) {
-                Payroll existing = payrollRepository.findByEmployeeIdAndPayrollMonth(employeeId, monthStr)
-                        .orElseThrow(() -> new ResourceNotFoundException("Payroll not found"));
-                results.add(mapToResponseDTO(existing));
+            Optional<Payroll> existingPayroll = payrollRepository.findByEmployeeIdAndPayrollMonthAndStoreId(employeeId, monthStr, storeId);
+            if (existingPayroll.isPresent()) {
+                results.add(mapToResponseDTO(existingPayroll.get()));
                 continue;
             }
 
-            LocalDate monthStart = targetMonth.atDay(1);
-            LocalDate monthEnd = targetMonth.atEndOfMonth();
-
-            BigDecimal totalBaseSalary;
-            StringBuilder details = new StringBuilder();
-
-            LocalDate activeStartDate = activeHistory.getStartDate().toLocalDate();
-
-            if (activeStartDate.isAfter(monthStart) && !activeStartDate.isAfter(monthEnd)) {
-
-                List<EmployeeWorkHistory> allHistories = workHistoryRepository.findAllByEmployeeId(employeeId);
-
-                BigDecimal oldSalary = BigDecimal.ZERO;
-                LocalDate effectiveOldStart = monthStart;
-
-                for (EmployeeWorkHistory h : allHistories) {
-                    if (!h.getId().equals(activeHistory.getId())
-                            && h.getEndDate() != null
-                            && !h.getEndDate().toLocalDate().isBefore(monthStart)) {
-
-                        oldSalary = h.getSalary();
-                        LocalDate oldHistoryStart = h.getStartDate().toLocalDate();
-                        effectiveOldStart = oldHistoryStart.isAfter(monthStart) ? oldHistoryStart : monthStart;
-                        break;
-                    }
-                }
-
-                long daysAtOldStore = ChronoUnit.DAYS.between(effectiveOldStart, activeStartDate);
-                long daysAtNewStore = ChronoUnit.DAYS.between(activeStartDate,
-                        targetMonth.atEndOfMonth().plusDays(1));
-
-                BigDecimal dailyOld = oldSalary.divide(BigDecimal.valueOf(STANDARD_DAYS_IN_MONTH), 2, RoundingMode.HALF_UP);
-                BigDecimal salaryOldPart = dailyOld.multiply(BigDecimal.valueOf(daysAtOldStore));
-
-                BigDecimal dailyNew = activeHistory.getSalary().divide(BigDecimal.valueOf(STANDARD_DAYS_IN_MONTH), 2, RoundingMode.HALF_UP);
-                BigDecimal salaryNewPart = dailyNew.multiply(BigDecimal.valueOf(daysAtNewStore));
-
-                totalBaseSalary = salaryOldPart.add(salaryNewPart).setScale(2, RoundingMode.HALF_UP);
-
-                if (daysAtOldStore == 0) {
-                    details.append(String.format("Hired and transferred in the same month. %d days in new store (%.2f AZN/day = %.2f AZN). ",
-                            daysAtNewStore, dailyNew, salaryNewPart));
-                } else {
-                    details.append(String.format("Transferred. %d days in old store (%.2f AZN/day = %.2f AZN), ",
-                            daysAtOldStore, dailyOld, salaryOldPart));
-                    details.append(String.format("%d days in new store (%.2f AZN/day = %.2f AZN). ",
-                            daysAtNewStore, dailyNew, salaryNewPart));
-                }
-
-            } else if (activeStartDate.isAfter(monthEnd)) {
-                continue;
-
-            } else {
-                totalBaseSalary = activeHistory.getSalary();
-                details.append(String.format("Full month worked. Salary: %.2f AZN. ", totalBaseSalary));
-            }
-
-            BigDecimal bonusAmount = BigDecimal.ZERO;
-
-            List<BonusDetail> allBonusDetails = new ArrayList<>();
-            allBonusDetails.addAll(storeBonuses.getOrDefault(employeeId, Collections.emptyList()));
-            allBonusDetails.addAll(personalBonuses.getOrDefault(employeeId, Collections.emptyList()));
-
-            for (BonusDetail bonusDetail : allBonusDetails) {
-                bonusAmount = bonusAmount.add(bonusDetail.getBonusAmount());
-
-                details.append(String.format("%s bonusu: %.2f AZN. ",
-                        bonusDetail.getGradeName(), bonusDetail.getBonusAmount()));
-
-                Grade grade = gradeRepository.findById(bonusDetail.getGradeId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Grade not found: " + bonusDetail.getGradeId()));
-
-                EmployeeMonthlyBonus monthlyBonus = new EmployeeMonthlyBonus();
-                monthlyBonus.setEmployee(employee);
-                monthlyBonus.setGrade(grade);
-                monthlyBonus.setPayrollMonth(monthStr);
-                monthlyBonus.setBonusAmount(bonusDetail.getBonusAmount());
-                employeeMonthlyBonusRepository.save(monthlyBonus);
-            }
-
-            BigDecimal totalAmount = totalBaseSalary.add(bonusAmount).setScale(2, RoundingMode.HALF_UP);
-
-            details.append(String.format("Total: %.2f AZN (Salary: %.2f + Bonus: %.2f)",
-                    totalAmount, totalBaseSalary, bonusAmount));
-
-            Payroll payroll = new Payroll();
-            payroll.setEmployee(employee);
-            payroll.setPayrollMonth(monthStr);
-            payroll.setBaseSalary(totalBaseSalary);
-            payroll.setBonusAmount(bonusAmount);
-            payroll.setTotalAmount(totalAmount);
-            payroll.setCalculationDetails(details.toString());
-
-            Payroll savedPayroll = payrollRepository.save(payroll);
-            results.add(mapToResponseDTO(savedPayroll));
+            Store store = history.getStore();
+            Payroll payroll = calculateAndBuildPayroll(targetMonth, monthStr, history, employee, store, storeBonuses, personalBonuses);
+            results.add(mapToResponseDTO(payrollRepository.save(payroll)));
         }
 
         return results;
+    }
+
+    @Override
+    @Transactional
+    public PayrollResponseDTO calculatePayrollForEmployee(Integer employeeId, YearMonth targetMonth) {
+
+        String monthStr = targetMonth.toString();
+
+        EmployeeWorkHistory history = workHistoryRepository
+                .findByEmployeeIdAndIsActiveTrue(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Active work history not found for employee: " + employeeId));
+
+        Employee employee = history.getEmployee();
+        Store store = history.getStore();
+        Integer storeId = store.getId();
+
+        Optional<Payroll> existingPayroll = payrollRepository.findByEmployeeIdAndPayrollMonthAndStoreId(employeeId, monthStr, storeId);
+        if (existingPayroll.isPresent()) {
+            return mapToResponseDTO(existingPayroll.get());
+        }
+
+        Map<Integer, List<BonusDetail>> storeBonuses = bonusCalculationService.calculateBonusWithStore(storeId, targetMonth);
+        Map<Integer, List<BonusDetail>> personalBonuses = bonusCalculationService.calculateBonusWithoutStore(List.of(employeeId), targetMonth);
+
+        Payroll payroll = calculateAndBuildPayroll(targetMonth, monthStr, history, employee, store, storeBonuses, personalBonuses);
+
+        return mapToResponseDTO(payrollRepository.save(payroll));
+    }
+
+    private Payroll calculateAndBuildPayroll(YearMonth targetMonth, String monthStr, EmployeeWorkHistory history, Employee employee, Store store, Map<Integer, List<BonusDetail>> storeBonuses, Map<Integer, List<BonusDetail>> personalBonuses) {
+
+        Integer employeeId = employee.getId();
+        //burada meblegin nece hasablandigi qeyd olunur, bonus ve maas ucun
+        StringBuilder details = new StringBuilder();
+        details.append(String.format("Store: %s. Employee: %s %s. ", store.getStoreName(), employee.getFirstName(), employee.getLastName()));
+
+        BigDecimal baseSalary = calculateProportionalSalary(history, targetMonth, details);
+        BigDecimal bonusAmount = collectBonuses(employee, employeeId, store, monthStr, storeBonuses, personalBonuses, details);
+        BigDecimal totalAmount = baseSalary.add(bonusAmount).setScale(2, RoundingMode.HALF_UP);
+
+        details.append(String.format("Total: %.2f AZN (Salary: %.2f + Bonus: %.2f)", totalAmount, baseSalary, bonusAmount));
+
+        return buildPayroll(employee, store, monthStr, baseSalary, bonusAmount, totalAmount, details.toString());
+    }
+
+    private BigDecimal calculateProportionalSalary(EmployeeWorkHistory history,
+                                                   YearMonth targetMonth,
+                                                   StringBuilder details) {
+        int totalDaysInMonth = targetMonth.lengthOfMonth();
+        LocalDate monthStart  = targetMonth.atDay(1);
+        LocalDate monthEnd    = targetMonth.atEndOfMonth();
+
+        LocalDate startDate = history.getStartDate().toLocalDate();
+        LocalDate endDate = history.getEndDate() != null
+                ? history.getEndDate().toLocalDate()
+                : monthEnd;
+
+        LocalDate effectiveStart = startDate.isBefore(monthStart) ? monthStart : startDate;
+        LocalDate effectiveEnd   = endDate.isAfter(monthEnd)      ? monthEnd   : endDate;
+
+        //we write '+1' to take the last day
+        //eslinde burada bug var. meselen isci bir ayda isden cixib sonra yeniden qayitsa
+        //findAllWorkedInStoreAndMonth  her ikisini de tapacaq, amma birini hesablayib digerine
+        //kecende dublikat yoxlamsindan kece bilmeyecek, ve maas itecek
+        //bu edge case-nin cox real gormediyim ucun heleki handle etmedim
+        long daysWorked = ChronoUnit.DAYS.between(effectiveStart, effectiveEnd) + 1;
+
+        BigDecimal dailyRate = history.getSalary()
+                .divide(BigDecimal.valueOf(totalDaysInMonth), 4, RoundingMode.HALF_UP);
+        BigDecimal salary = dailyRate.multiply(BigDecimal.valueOf(daysWorked))
+                .setScale(2, RoundingMode.HALF_UP);
+
+        if (daysWorked == totalDaysInMonth) {
+            details.append(String.format("Full month. Salary: %.2f AZN. ", salary));
+        } else {
+            details.append(String.format("%d days worked (%.4f AZN/day = %.2f AZN). ",
+                    daysWorked, dailyRate, salary));
+        }
+
+        return salary;
+    }
+
+    private BigDecimal collectBonuses(Employee employee, Integer employeeId, Store store,
+                                      String monthStr,
+                                      Map<Integer, List<BonusDetail>> storeBonuses,
+                                      Map<Integer, List<BonusDetail>> personalBonuses,
+                                      StringBuilder details) {
+        //iscinin bonuslarini tek bir listde birlesdirmek ucn
+        List<BonusDetail> allBonusDetails = new ArrayList<>();
+        allBonusDetails.addAll(storeBonuses.getOrDefault(employeeId, Collections.emptyList()));
+        allBonusDetails.addAll(personalBonuses.getOrDefault(employeeId, Collections.emptyList()));
+
+        BigDecimal totalBonus = BigDecimal.ZERO;
+
+        for (BonusDetail bonusDetail : allBonusDetails) {
+            totalBonus = totalBonus.add(bonusDetail.getBonusAmount());
+
+            details.append(String.format("%s bonusu: %.2f AZN. ",
+                    bonusDetail.getGradeName(), bonusDetail.getBonusAmount()));
+
+            Grade grade = gradeRepository.findById(bonusDetail.getGradeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Grade not found: " + bonusDetail.getGradeId()));
+
+            EmployeeMonthlyBonus monthlyBonus = new EmployeeMonthlyBonus();
+            monthlyBonus.setEmployee(employee);
+            monthlyBonus.setGrade(grade);
+            monthlyBonus.setStore(store);
+            monthlyBonus.setPayrollMonth(monthStr);
+            monthlyBonus.setBonusAmount(bonusDetail.getBonusAmount());
+            employeeMonthlyBonusRepository.save(monthlyBonus);
+        }
+
+        return totalBonus;
+    }
+
+    private Payroll buildPayroll(Employee employee, Store store, String monthStr,
+                                 BigDecimal baseSalary, BigDecimal bonusAmount,
+                                 BigDecimal totalAmount, String details) {
+        Payroll payroll = new Payroll();
+        payroll.setEmployee(employee);
+        payroll.setStore(store);
+        payroll.setPayrollMonth(monthStr);
+        payroll.setBaseSalary(baseSalary);
+        payroll.setBonusAmount(bonusAmount);
+        payroll.setTotalAmount(totalAmount);
+        payroll.setCalculationDetails(details);
+        return payroll;
     }
 
     private PayrollResponseDTO mapToResponseDTO(Payroll payroll) {
@@ -183,6 +220,7 @@ public class PayrollServiceImpl implements PayrollService {
         dto.setPayrollId(payroll.getId());
         dto.setEmployeeId(payroll.getEmployee().getId());
         dto.setEmployeeName(payroll.getEmployee().getFirstName() + " " + payroll.getEmployee().getLastName());
+        dto.setStoreName(payroll.getStore().getStoreName());
         dto.setBaseSalary(payroll.getBaseSalary());
         dto.setBonusAmount(payroll.getBonusAmount());
         dto.setTotalAmount(payroll.getTotalAmount());

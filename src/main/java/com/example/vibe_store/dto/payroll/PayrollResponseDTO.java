@@ -12,6 +12,7 @@ public class PayrollResponseDTO {
     private Long payrollId;
     private Integer employeeId;
     private String employeeName;
+    private String storeName;
     private BigDecimal baseSalary;
     private BigDecimal bonusAmount;
     private BigDecimal totalAmount;

@@ -1,5 +1,6 @@
 package com.example.vibe_store.entity.employee;
 
+import com.example.vibe_store.entity.Store;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,7 +15,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @Table(name = "payrolls",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "payroll_month"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "payroll_month", "store_id"}))
 public class Payroll {
 
     @Id
@@ -24,6 +25,10 @@ public class Payroll {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id", nullable = false)
     private Employee employee;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
 
     @Column(name = "payroll_month", nullable = false, length = 7)
     private String payrollMonth;

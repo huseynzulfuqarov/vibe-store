@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface PayrollRepository extends JpaRepository<Payroll, Long> {
 
-    Optional<Payroll> findByEmployeeIdAndPayrollMonth(Integer employeeId, String payrollMonth);
+    Optional<Payroll> findByEmployeeIdAndPayrollMonthAndStoreId(Integer employeeId, String payrollMonth, Integer storeId);
 
-    boolean existsByEmployeeIdAndPayrollMonth(Integer employeeId, String payrollMonth);
+    Optional<Payroll> findByEmployeeIdAndPayrollMonth(Integer employeeId, String payrollMonth);
 }

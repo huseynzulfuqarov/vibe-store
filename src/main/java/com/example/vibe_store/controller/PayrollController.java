@@ -23,4 +23,12 @@ public class PayrollController {
         YearMonth targetMonth = YearMonth.parse(yearMonth);
         return ResponseEntity.ok(payrollService.calculatePayrollForStore(storeId, targetMonth));
     }
+
+    @PostMapping("/employee/{employeeId}/calculate")
+    public ResponseEntity<PayrollResponseDTO> calculatePayrollForEmployee(
+            @PathVariable Integer employeeId,
+            @RequestParam String yearMonth) {
+        YearMonth targetMonth = YearMonth.parse(yearMonth);
+        return ResponseEntity.ok(payrollService.calculatePayrollForEmployee(employeeId, targetMonth));
+    }
 }

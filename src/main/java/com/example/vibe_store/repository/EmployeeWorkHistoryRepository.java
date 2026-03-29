@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +17,15 @@ public interface EmployeeWorkHistoryRepository extends JpaRepository<EmployeeWor
             "WHERE ewh.store.id = :storeId " +
             "AND ewh.isActive = true")
     List<EmployeeWorkHistory> findAllActiveByStoreId(@Param("storeId") Integer storeId);
+
+    @Query("SELECT ewh FROM EmployeeWorkHistory ewh " +
+            "WHERE ewh.store.id = :storeId " +
+            "AND ewh.startDate <= :monthEnd " +
+            "AND (ewh.endDate IS NULL OR ewh.endDate >= :monthStart)")
+    List<EmployeeWorkHistory> findAllWorkedInStoreAndMonth(
+            @Param("storeId") Integer storeId,
+            @Param("monthStart") LocalDateTime monthStart,
+            @Param("monthEnd") LocalDateTime monthEnd);
 
     @Query("SELECT ewh FROM EmployeeWorkHistory ewh " +
             "WHERE ewh.employee.id = :employeeId " +
