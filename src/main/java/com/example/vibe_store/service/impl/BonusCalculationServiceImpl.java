@@ -29,13 +29,9 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
     private final GradedEmployeeRepository gradedEmployeeRepo;
     private final SaleRepository saleRepo;
     private final GradeRuleRepository gradeRuleRepo;
-    private final StoreRepository storeRepository;
 
     @Override
     public Map<Integer, List<BonusDetail>> calculateBonusWithStore(Integer storeId, YearMonth targetMonth) {
-
-        storeRepository.findById(storeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Store not found: " + storeId));
 
         LocalDateTime startOfMonth = targetMonth.atDay(1).atStartOfDay();
         LocalDateTime endOfMonth = targetMonth.atEndOfMonth().atTime(23, 59, 59);

@@ -1,6 +1,7 @@
 package com.example.vibe_store.dto.sale;
 
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,5 +18,6 @@ public class CreateSaleRequestDTO {
     private Integer employeeId;
 
     @NotNull(message = "Sale amount cannot be null")
+    @Positive
     private BigDecimal saleAmount;
 }

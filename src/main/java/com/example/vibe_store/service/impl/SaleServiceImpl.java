@@ -11,6 +11,7 @@ import com.example.vibe_store.service.SaleService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +21,7 @@ public class SaleServiceImpl implements SaleService {
     private final ModelMapper modelMapper;
     private final EmployeeWorkHistoryRepository workHistoryRepository;
 
+    @Transactional
     @Override
     public SaleResponseDTO createSale(CreateSaleRequestDTO requestDTO) {
 

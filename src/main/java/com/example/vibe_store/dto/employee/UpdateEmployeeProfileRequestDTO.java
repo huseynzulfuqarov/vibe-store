@@ -4,21 +4,20 @@ import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
-
 @Getter
 @Setter
 public class UpdateEmployeeProfileRequestDTO {
 
-    @Size(min = 4, max = 20, message = "Ad uzunlugu minimum 4, max 20 ola biler")
+    @Size(min = 4, max = 20, message = "First name length must be between 4 and 20 characters")
     private String firstName;
 
-    @Size(min = 4, max = 20, message = "Soyad uzunlugu minimum 4, max 20 ola biler")
+    @Size(min = 4, max = 20, message = "Last name length must be between 4 and 20 characters")
     private String lastName;
 
-    @Min(value = 18, message = "Yas 18 den kiccik ola bilmez")
-    @Max(value = 65, message = "Yas 65 den cox ola bilmez")
+    @Min(value = 18, message = "Age cannot be less than 18")
+    @Max(value = 65, message = "Age cannot be greater than 65")
     private Byte age;
 
-    @Email(message = "email formati sehvdir")
+    @Email(message = "Invalid email format")
     private String email;
 }

@@ -134,7 +134,6 @@ public class EmployeeServiceImpl implements EmployeeService {
             throw new AlreadyExistsException("This email is already in use: " + requestDto.getEmail());
         }
 
-
         modelMapper.map(requestDto, employee);
 
         Employee saved = employeeRepository.save(employee);
@@ -142,6 +141,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         return modelMapper.map(saved, EmployeeProfileResponseDTO.class);
     }
 
+    @Override
     public AllEmployeeDetailsResponseDTO getEmployeeById(Integer employeeId) {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));

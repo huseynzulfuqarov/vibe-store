@@ -11,6 +11,7 @@ import com.example.vibe_store.service.StoreService;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class StoreServiceImpl implements StoreService {
     private final WarehouseRepository warehouseRepository;
     private final ModelMapper modelMapper;
 
+    @Transactional
     @Override
     public StoreResponseDTO createStore(CreateStoreRequestDTO requestDto) {
         Warehouse warehouse = warehouseRepository.findById(requestDto.getWarehouseId())

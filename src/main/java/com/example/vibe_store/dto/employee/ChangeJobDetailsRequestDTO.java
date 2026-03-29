@@ -1,6 +1,6 @@
 package com.example.vibe_store.dto.employee;
 
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,6 +16,6 @@ public class ChangeJobDetailsRequestDTO {
     private Integer targetStoreId;
     private Integer targetPositionId;
 
-    @Min(value = 370, message = "Salary cannot be less than 370 azn")
+    @DecimalMin(value = "370", message = "Salary cannot be less than 370 azn")
     private BigDecimal newSalary;
 }

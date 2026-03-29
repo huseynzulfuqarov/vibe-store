@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 public class HireEmployeeRequestDTO {
 
     @NotBlank(message = "First name cannot be blank")
+    @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
     private String firstName;
 
     @NotBlank(message = "Last name cannot be blank")
@@ -18,6 +19,7 @@ public class HireEmployeeRequestDTO {
 
     @Min(value = 18, message = "Age cannot be less than 18")
     @Max(value = 65, message = "Age cannot be greater than 65")
+    @NotNull
     private Byte age;
 
     @NotBlank(message = "Email cannot be blank")
@@ -31,6 +33,6 @@ public class HireEmployeeRequestDTO {
     private Integer positionId;
 
     @NotNull(message = "Salary cannot be null")
-    @Min(value = 370, message = "Minimum salary is 370 AZN")
+    @DecimalMin(value = "370", message = "Minimum salary is 370 AZN")
     private BigDecimal salary;
 }

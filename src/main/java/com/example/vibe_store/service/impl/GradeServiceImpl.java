@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,28 +44,14 @@ public class GradeServiceImpl implements GradeService {
         newGrade.setGradeType(requestDTO.getGradeType());
         newGrade.setIsActive(true);
 
-        Grade savedGrade = gradeRepository.save(newGrade);
+        gradeRepository.save(newGrade);
 
         if (requestDTO.getRules() != null && !requestDTO.getRules().isEmpty()) {
             for (CreateGradeRuleRequestDTO ruleDto : requestDTO.getRules()) {
 
                 validateGradeRuleDependencies(requestDTO.getGradeType(), ruleDto);
 
-                GradeRule newRule = new GradeRule();
-                newRule.setGrade(savedGrade);
-                newRule.setTargetType(ruleDto.getTargetType());
-                newRule.setFixedAmount(ruleDto.getFixedAmount());
-                newRule.setMinThreshold(ruleDto.getMinThreshold());
-                newRule.setMaxThreshold(ruleDto.getMaxThreshold());
-                newRule.setPercentage(ruleDto.getPercentage());
-                newRule.setSharePercentage(ruleDto.getSharePercentage());
-
-                if (ruleDto.getPositionId() != null) {
-                    Position position = positionRepository.findById(ruleDto.getPositionId())
-                            .orElseThrow(() -> new ResourceNotFoundException("Position not found: " + ruleDto.getPositionId()));
-                    newRule.setPosition(position);
-                }
-                gradeRuleRepository.save(newRule);
+               buildAndSaveGradeRule(newGrade, ruleDto);
             }
         }
         return getGradeById(newGrade.getId());
@@ -81,30 +66,19 @@ public class GradeServiceImpl implements GradeService {
 
         validateGradeRuleDependencies(grade.getGradeType(), requestDTO);
 
-        GradeRule newRule = new GradeRule();
+        GradeRule newRule = buildAndSaveGradeRule(grade, requestDTO);
 
-        newRule.setGrade(grade);
-        newRule.setTargetType(requestDTO.getTargetType());
-        newRule.setFixedAmount(requestDTO.getFixedAmount());
-        newRule.setMinThreshold(requestDTO.getMinThreshold());
-        newRule.setMaxThreshold(requestDTO.getMaxThreshold());
-        newRule.setPercentage(requestDTO.getPercentage());
-        newRule.setSharePercentage(requestDTO.getSharePercentage());
-
-        if (requestDTO.getPositionId() != null) {
-            Position position = positionRepository.findById(requestDTO.getPositionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Position not found: " + requestDTO.getPositionId()));
-            newRule.setPosition(position);
-        }
-
-        GradeRule savedRule = gradeRuleRepository.save(newRule);
-
-        return getGradeRuleRespondDTO(savedRule);
+        return getGradeRuleRespondDTO(newRule);
     }
 
     @Override
     @Transactional
     public void assignGradeRule(AssignGradeRequestDTO requestDTO) {
+
+        if (requestDTO.getStartDate() != null && requestDTO.getEndDate() != null
+                && !requestDTO.getStartDate().isBefore(requestDTO.getEndDate())) {
+            throw new IllegalArgumentException("Start date must be before end date");
+        }
 
         Grade grade = gradeRepository.findById(requestDTO.getGradeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Grade not found"));
@@ -156,7 +130,7 @@ public class GradeServiceImpl implements GradeService {
 
         List<GradeRuleRespondDTO> ruleDtos = rules.stream()
                 .map(this::getGradeRuleRespondDTO)
-                .collect(Collectors.toList());
+                .toList();
 
         responseDTO.setRules(ruleDtos);
 
@@ -173,6 +147,28 @@ public class GradeServiceImpl implements GradeService {
 
     // ================= HELPER =================
 
+    private GradeRule buildAndSaveGradeRule(Grade grade, CreateGradeRuleRequestDTO ruleDto){
+
+        GradeRule newRule = new GradeRule();
+
+        newRule.setGrade(grade);
+        newRule.setTargetType(ruleDto.getTargetType());
+        newRule.setFixedAmount(ruleDto.getFixedAmount());
+        newRule.setMinThreshold(ruleDto.getMinThreshold());
+        newRule.setMaxThreshold(ruleDto.getMaxThreshold());
+        newRule.setPercentage(ruleDto.getPercentage());
+        newRule.setSharePercentage(ruleDto.getSharePercentage());
+
+        if (ruleDto.getPositionId() != null) {
+            Position position = positionRepository.findById(ruleDto.getPositionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Position not found: " + ruleDto.getPositionId()));
+            newRule.setPosition(position);
+        }
+
+        gradeRuleRepository.save(newRule);
+
+        return newRule;
+    }
     private GradeRuleRespondDTO getGradeRuleRespondDTO(GradeRule savedRule) {
         GradeRuleRespondDTO respondDTO = new GradeRuleRespondDTO();
 
@@ -191,11 +187,11 @@ public class GradeServiceImpl implements GradeService {
 
     private void validateGradeRuleDependencies(GradeType gradeType, CreateGradeRuleRequestDTO ruleDto) {
 
-        if (gradeType == GradeType.FIXED_GRADE) {
-            if (ruleDto.getFixedAmount() == null || ruleDto.getFixedAmount().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException("For FIXED_GRADE, 'fixedAmount' must be provided and greater than 0.");
-            }
-        } else if (gradeType == GradeType.PERCENT_GRADE || gradeType == GradeType.GRADE_THRESHOLD) {
+        if (gradeType == GradeType.FIXED_GRADE && (ruleDto.getFixedAmount() == null || ruleDto.getFixedAmount().compareTo(BigDecimal.ZERO) <= 0)) {
+            throw new IllegalArgumentException("For FIXED_GRADE, 'fixedAmount' must be provided and greater than 0.");
+        }
+
+        if (gradeType == GradeType.PERCENT_GRADE || gradeType == GradeType.GRADE_THRESHOLD) {
             if (ruleDto.getPercentage() == null || ruleDto.getPercentage().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException(gradeType + " requires a valid 'percentage' value.");
             }
