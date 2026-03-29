@@ -41,10 +41,18 @@ rule-based bonus system.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/stores` | Create a store |
+| GET | `/api/stores` | Get all stores |
 | GET | `/api/stores/{id}` | Get store by ID |
+| DELETE | `/api/stores/{id}` | Delete a store |
 | POST | `/api/employees` | Hire an employee |
+| GET | `/api/employees/{id}` | Get employee by ID |
+| PATCH | `/api/employees/{id}/profile` | Update employee profile |
 | POST | `/api/employees/changeJobDetails` | Transfer or update job details |
+| POST | `/api/employees/positions` | Create a position |
+| GET | `/api/employees/positions/{id}` | Get position by ID |
 | POST | `/api/grades` | Create a grade |
+| GET | `/api/grades/{id}` | Get grade by ID |
+| POST | `/api/grades/{id}/rules` | Add a rule to a grade |
 | POST | `/api/grades/assign` | Assign a grade to a store or employee |
 | POST | `/api/sales` | Record a sale |
 | POST | `/api/payroll/store/{storeId}/calculate` | Calculate payroll for a store |
