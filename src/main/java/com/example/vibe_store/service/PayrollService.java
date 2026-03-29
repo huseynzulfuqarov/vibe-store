@@ -8,5 +8,5 @@ import java.util.List;
 public interface PayrollService {
     List<PayrollResponseDTO> calculatePayrollForStore(Integer storeId, YearMonth targetMonth);
 
-    PayrollResponseDTO calculatePayrollForEmployee(Integer employeeId, YearMonth targetMonth);
+    List<PayrollResponseDTO> calculatePayrollForEmployee(Integer employeeId, YearMonth targetMonth);
 }

@@ -34,4 +34,13 @@ public interface EmployeeWorkHistoryRepository extends JpaRepository<EmployeeWor
 
     Optional<EmployeeWorkHistory> findByEmployeeIdAndStoreIdAndIsActiveTrue(Integer employeeId, Integer storeId);
 
+    @Query("SELECT ewh FROM EmployeeWorkHistory ewh " +
+            "WHERE ewh.employee.id = :employeeId " +
+            "AND ewh.startDate <= :monthEnd " +
+            "AND (ewh.endDate IS NULL OR ewh.endDate >= :monthStart)")
+    List<EmployeeWorkHistory> findAllByEmployeeIdAndMonth(
+            @Param("employeeId") Integer employeeId,
+            @Param("monthStart") LocalDateTime monthStart,
+            @Param("monthEnd") LocalDateTime monthEnd);
+
 }

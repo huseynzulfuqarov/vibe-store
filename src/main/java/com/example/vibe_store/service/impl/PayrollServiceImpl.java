@@ -90,29 +90,44 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     @Transactional
-    public PayrollResponseDTO calculatePayrollForEmployee(Integer employeeId, YearMonth targetMonth) {
+    public List<PayrollResponseDTO> calculatePayrollForEmployee(Integer employeeId, YearMonth targetMonth) {
 
+        LocalDateTime monthStart = targetMonth.atDay(1).atStartOfDay();
+        LocalDateTime monthEnd   = targetMonth.atEndOfMonth().atTime(23, 59, 59);
         String monthStr = targetMonth.toString();
 
-        EmployeeWorkHistory history = workHistoryRepository
-                .findByEmployeeIdAndIsActiveTrue(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Active work history not found for employee: " + employeeId));
+        List<EmployeeWorkHistory> histories =
+                workHistoryRepository.findAllByEmployeeIdAndMonth(employeeId, monthStart, monthEnd);
 
-        Employee employee = history.getEmployee();
-        Store store = history.getStore();
-        Integer storeId = store.getId();
-
-        Optional<Payroll> existingPayroll = payrollRepository.findByEmployeeIdAndPayrollMonthAndStoreId(employeeId, monthStr, storeId);
-        if (existingPayroll.isPresent()) {
-            return mapToResponseDTO(existingPayroll.get());
+        if (histories.isEmpty()) {
+            throw new ResourceNotFoundException("No work history found for employee " + employeeId + " in " + monthStr);
         }
 
-        Map<Integer, List<BonusDetail>> storeBonuses = bonusCalculationService.calculateBonusWithStore(storeId, targetMonth);
-        Map<Integer, List<BonusDetail>> personalBonuses = bonusCalculationService.calculateBonusWithoutStore(List.of(employeeId), targetMonth);
+        List<PayrollResponseDTO> results = new ArrayList<>();
 
-        Payroll payroll = calculateAndBuildPayroll(targetMonth, monthStr, history, employee, store, storeBonuses, personalBonuses);
+        for (EmployeeWorkHistory history : histories) {
+            Employee employee = history.getEmployee();
+            Store store = history.getStore();
+            Integer storeId = store.getId();
 
-        return mapToResponseDTO(payrollRepository.save(payroll));
+            Optional<Payroll> existingPayroll = payrollRepository.findByEmployeeIdAndPayrollMonthAndStoreId(employeeId, monthStr, storeId);
+            if (existingPayroll.isPresent()) {
+                results.add(mapToResponseDTO(existingPayroll.get()));
+                continue;
+            }
+
+            boolean isActive = Boolean.TRUE.equals(history.getIsActive());
+
+            Map<Integer, List<BonusDetail>> storeBonuses = bonusCalculationService.calculateBonusWithStore(storeId, targetMonth);
+            Map<Integer, List<BonusDetail>> personalBonuses = isActive
+                    ? bonusCalculationService.calculateBonusWithoutStore(List.of(employeeId), targetMonth)
+                    : Collections.emptyMap();
+
+            Payroll payroll = calculateAndBuildPayroll(targetMonth, monthStr, history, employee, store, storeBonuses, personalBonuses);
+            results.add(mapToResponseDTO(payrollRepository.save(payroll)));
+        }
+
+        return results;
     }
 
     private Payroll calculateAndBuildPayroll(YearMonth targetMonth, String monthStr, EmployeeWorkHistory history, Employee employee, Store store, Map<Integer, List<BonusDetail>> storeBonuses, Map<Integer, List<BonusDetail>> personalBonuses) {
