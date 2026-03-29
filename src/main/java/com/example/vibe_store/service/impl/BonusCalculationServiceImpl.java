@@ -18,6 +18,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -52,241 +53,223 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                 .findByStoreIdAndEndDateInTargetMonth(storeId, startOfMonth, endOfMonth);
 
         for (GradeAssignment assignment : assignments) {
-
-            GradeType gradeType = assignment.getGrade().getGradeType();
-            List<GradeRule> rules = gradeRuleRepo.findAllByGradeId(assignment.getGrade().getId());
-
-            LocalDateTime gradeStart = assignment.getStartDate();
-            LocalDateTime gradeEnd = assignment.getEndDate();
-
-            BigDecimal storeTotalSales = saleRepo.getTotalSalesByStoreAndDate(storeId, gradeStart, gradeEnd);
-
-            boolean storeTargetMet = false;
-
-            if (gradeType == GradeType.GRADE_THRESHOLD) {
-
-                for (GradeRule rule : rules) {
-                    if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) {
-                        if (isInRange(storeTotalSales, rule)) {
-                            storeTargetMet = true;
-                            break;
-                        }
-                    }
-                }
-            } else {
-                // same logic for FIXED_GRADE and PERCENT_GRADE
-                storeTargetMet = true;
-
-                for (GradeRule rule : rules) {
-                    if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) {
-                        if (rule.getMinThreshold() != null
-                                && storeTotalSales.compareTo(rule.getMinThreshold()) < 0) {
-                            storeTargetMet = false;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!storeTargetMet) continue;
-
-            List<GradedEmployee> gradedEmployees = gradedEmployeeRepo.findAllByGradeAssignmentId(assignment.getId());
-
-            List<EmployeeWorkHistory> eligibleEmployees = new ArrayList<>();
-
-            if (gradedEmployees.isEmpty()) {
-                eligibleEmployees = activeHistories;
-            } else {
-
-                Set<Integer> specificIds = new HashSet<>();
-
-                for (GradedEmployee ge : gradedEmployees) {
-                    specificIds.add(ge.getEmployee().getId());
-                }
-
-                // check if employee is still active (may have left the company)
-                for (EmployeeWorkHistory h : activeHistories) {
-                    if (specificIds.contains(h.getEmployee().getId())) {
-                        eligibleEmployees.add(h);
-                    }
-                }
-            }
-
-            if (eligibleEmployees.isEmpty()) continue;
-
-            for (GradeRule rule : rules) {
-
-                List<EmployeeWorkHistory> targetEmployees;
-
-                if (rule.getPosition() == null) {
-                    targetEmployees = eligibleEmployees;
-                } else {
-                    targetEmployees = new ArrayList<>();
-                    for (EmployeeWorkHistory history : eligibleEmployees) {
-                        if (history.getPosition().getId().equals(rule.getPosition().getId())) {
-                            targetEmployees.add(history);
-                        }
-                    }
-                }
-
-                if (targetEmployees.isEmpty()) continue;
-
-                List<Integer> qualifiedIds = new ArrayList<>();
-
-                for (EmployeeWorkHistory emp : targetEmployees) {
-
-                    Integer empId = emp.getEmployee().getId();
-                    BigDecimal salesToCheck;
-
-                    //GRADE_THRESHOLD-a gore bunu yazmaliyiq, cunki ozsuzda magaza limiti kecib,
-                    // amma bu grade tipi ucun hemin rule ucun limiti kecibmi yoxsa yox, onu yoxlamaliyiq
-                    if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) {
-                        salesToCheck = storeTotalSales;
-                    } else {
-
-                        //sexsi rule ucun
-                        LocalDateTime effectiveStart;
-                        if (gradeStart.isAfter(emp.getStartDate())) {
-                            effectiveStart = gradeStart;
-                        } else {
-                            effectiveStart = emp.getStartDate();
-                        }
-                        salesToCheck = saleRepo.getTotalSalesByEmployeeStoreAndDate(empId, storeId, effectiveStart, gradeEnd);
-                    }
-
-                    if (isInRange(salesToCheck, rule)) {
-                        qualifiedIds.add(empId);
-                    }
-                }
-
-                if (qualifiedIds.isEmpty()) continue;
-
-                BigDecimal bonusPerPerson = BigDecimal.ZERO;
-
-                if (gradeType == GradeType.FIXED_GRADE) {
-                    if (rule.getFixedAmount() != null) {
-                        bonusPerPerson = rule.getFixedAmount();
-                    }
-                } else {
-                    if (rule.getPercentage() != null && rule.getSharePercentage() != null) {
-
-                        BigDecimal totalPool = storeTotalSales
-                                .multiply(rule.getPercentage())
-                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
-                        BigDecimal groupPool = totalPool
-                                .multiply(rule.getSharePercentage())
-                                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
-                        bonusPerPerson = groupPool
-                                .divide(BigDecimal.valueOf(qualifiedIds.size()), 2, RoundingMode.HALF_UP);
-                    }
-                }
-
-                if (bonusPerPerson.compareTo(BigDecimal.ZERO) > 0) {
-
-                    Integer gradeId = assignment.getGrade().getId();
-                    String gradeName = assignment.getGrade().getGradeName();
-
-                    for (Integer empId : qualifiedIds) {
-                        employeeBonuses
-                                .computeIfAbsent(empId, k -> new ArrayList<>())
-                                .add(new BonusDetail(gradeId, gradeName, bonusPerPerson));
-                    }
-                }
-            }
+          processStoreAssignment(assignment, storeId, activeHistories, employeeBonuses);
         }
 
-        return employeeBonuses;
+      return employeeBonuses;
     }
 
     @Override
     public Map<Integer, List<BonusDetail>> calculateBonusWithoutStore(List<Integer> employeeIds, YearMonth targetMonth) {
 
-        LocalDateTime startOfMonth = targetMonth.atDay(1).atStartOfDay();
-        LocalDateTime endOfMonth = targetMonth.atEndOfMonth().atTime(23, 59, 59);
+      LocalDateTime startOfMonth = targetMonth.atDay(1).atStartOfDay();
+      LocalDateTime endOfMonth = targetMonth.atEndOfMonth().atTime(23, 59, 59);
 
-        Map<Integer, List<BonusDetail>> employeeBonuses = new HashMap<>();
+      Map<Integer, List<BonusDetail>> employeeBonuses = new HashMap<>();
 
-        for (Integer employeeId : employeeIds) {
+      for (Integer employeeId : employeeIds){
+          List<GradeAssignment> assignments = gradeAssignmentRepo
+                  .findStoreNullByEmployeeAndMonth(employeeId, startOfMonth, endOfMonth);
 
-            List<GradeAssignment> assignments =
-                    gradeAssignmentRepo.findStoreNullByEmployeeAndMonth(employeeId, startOfMonth, endOfMonth);
+          if (assignments.isEmpty()) continue;
 
-            if (assignments.isEmpty()) continue;
+          EmployeeWorkHistory activeHistory = employeeWorkHistoryRepository
+                  .findByEmployeeIdAndIsActiveTrue(employeeId)
+                  .orElseThrow(() -> new ResourceNotFoundException("Active work history not found for employee: " + employeeId));
 
-            EmployeeWorkHistory activeHistory = employeeWorkHistoryRepository
-                    .findByEmployeeIdAndIsActiveTrue(employeeId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Active work history not found for employee: " + employeeId));
+          for (GradeAssignment assignment : assignments) {
+            processIndividualAssignment(assignment, employeeId, activeHistory, employeeBonuses);
+          }
+      }
 
-            Integer currentStoreId = activeHistory.getStore().getId();
+      return employeeBonuses;
+    }
 
-            for (GradeAssignment assignment : assignments) {
+    private void processStoreAssignment(GradeAssignment assignment, Integer storeId,
+                                        List<EmployeeWorkHistory> activeHistories,
+                                        Map<Integer, List<BonusDetail>> employeeBonuses) {
 
-                GradeType gradeType = assignment.getGrade().getGradeType();
-                List<GradeRule> rules = gradeRuleRepo.findAllByGradeId(assignment.getGrade().getId());
+        GradeType gradeType = assignment.getGrade().getGradeType();
+        List<GradeRule> rules = gradeRuleRepo.findAllByGradeId(assignment.getGrade().getId());
 
-                LocalDateTime gradeStart = assignment.getStartDate();
-                LocalDateTime gradeEnd = assignment.getEndDate();
+        LocalDateTime gradeStart = assignment.getStartDate();
+        LocalDateTime gradeEnd = assignment.getEndDate();
 
-                for (GradeRule rule : rules) {
+        BigDecimal storeTotalSales = saleRepo.getTotalSalesByStoreAndDate(storeId, gradeStart, gradeEnd);
 
-                    // ignore STORE_TOTAL_SALES rules for individual calculation
-                    if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) continue;
+        if (!isStoreTargetMet(gradeType, rules, storeTotalSales)) return;
 
-                    if (rule.getPosition() != null) {
-                        if (!activeHistory.getPosition().getId().equals(rule.getPosition().getId())) {
-                            continue;
-                        }
-                    }
+        List<GradedEmployee> gradedEmployees = gradedEmployeeRepo.findAllByGradeAssignmentId(assignment.getId());
+        List<EmployeeWorkHistory> eligibleEmployees = getEligibleEmployees(gradedEmployees, activeHistories);
 
-                    LocalDateTime effectiveStart;
-                    if (gradeStart.isAfter(activeHistory.getStartDate())) {
-                        effectiveStart = gradeStart;
-                    } else {
-                        effectiveStart = activeHistory.getStartDate();
-                    }
+        if (eligibleEmployees.isEmpty()) return;
 
-                    BigDecimal employeeSales = saleRepo
-                            .getTotalSalesByEmployeeStoreAndDate(employeeId, currentStoreId, effectiveStart, gradeEnd);
+        for (GradeRule rule : rules) {
+          processStoreRule(rule, gradeType, eligibleEmployees, storeId, storeTotalSales, assignment, gradeStart, gradeEnd, employeeBonuses);
+        }
+    }
 
-                    if (!isInRange(employeeSales, rule)) continue;
+    private void processStoreRule(GradeRule rule, GradeType gradeType,
+                                  List<EmployeeWorkHistory> eligibleEmployees,
+                                  Integer storeId, BigDecimal storeTotalSales,
+                                  GradeAssignment assignment,
+                                  LocalDateTime gradeStart, LocalDateTime gradeEnd,
+                                  Map<Integer, List<BonusDetail>> employeeBonuses) {
 
-                    BigDecimal bonus = BigDecimal.ZERO;
+        List<EmployeeWorkHistory> targetEmployees = getTargetEmployees(eligibleEmployees, rule);
+        if (targetEmployees.isEmpty()) return;
 
-                    if (gradeType == GradeType.FIXED_GRADE) {
-                        if (rule.getFixedAmount() != null) {
-                            bonus = rule.getFixedAmount();
-                        }
-                    } else {
-                        if (rule.getPercentage() != null) {
-                            bonus = employeeSales.multiply(rule.getPercentage())
-                                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-                        }
-                    }
+        List<Integer> qualifiedIds = new ArrayList<>();
+        for (EmployeeWorkHistory emp : targetEmployees) {
 
-                    if (bonus.compareTo(BigDecimal.ZERO) > 0) {
+            Integer empId = emp.getEmployee().getId();
+            BigDecimal salesToCheck;
 
-                        Integer gradeId = assignment.getGrade().getId();
-                        String gradeName = assignment.getGrade().getGradeName();
+            // For GRADE_THRESHOLD, we must check this because even though the store limit was passed,
+            // we need to verify if the limit for this specific rule within that grade type was met.
+            if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) {
+              salesToCheck = storeTotalSales;
+            } else {
+              // for individual rules
+              LocalDateTime effectiveStart = resolveEffectiveStart(gradeStart, emp.getStartDate());
+              salesToCheck = saleRepo.getTotalSalesByEmployeeStoreAndDate(empId, storeId, effectiveStart, gradeEnd);
+            }
 
-                        employeeBonuses.computeIfAbsent(employeeId, k -> new ArrayList<>())
-                                .add(new BonusDetail(gradeId, gradeName, bonus));
-                    }
-                }
+            if (isInRange(salesToCheck, rule)) {
+              qualifiedIds.add(empId);
             }
         }
 
-        return employeeBonuses;
+        BigDecimal bonusPerPerson = calculateStoreBonus(gradeType, rule, storeTotalSales, qualifiedIds.size());
+
+        if (bonusPerPerson.compareTo(BigDecimal.ZERO) > 0) {
+            for (Integer emId : qualifiedIds) {
+              addBonusToMap(employeeBonuses, emId, assignment, bonusPerPerson);
+            }
+        }
+    }
+
+    private void processIndividualAssignment(GradeAssignment assignment, Integer employeeId,
+                                             EmployeeWorkHistory activeHistory,
+                                             Map<Integer, List<BonusDetail>> employeeBonuses) {
+
+        GradeType gradeType = assignment.getGrade().getGradeType();
+        List<GradeRule> rules = gradeRuleRepo.findAllByGradeId(assignment.getGrade().getId());
+
+        LocalDateTime gradeStart = assignment.getStartDate();
+        LocalDateTime gradeEnd = assignment.getEndDate();
+        Integer currentStoreId = activeHistory.getStore().getId();
+
+        for (GradeRule rule : rules) {
+
+          // ignore STORE_TOTAL_SALES rules for individual calculation
+            if (rule.getTargetType() == TargetType.STORE_TOTAL_SALES) continue;
+
+            if (rule.getPosition() != null && !activeHistory.getPosition().getId().equals(rule.getPosition().getId()))
+              continue;
+
+            LocalDateTime effectiveStart = resolveEffectiveStart(gradeStart, activeHistory.getStartDate());
+            BigDecimal employeeSales = saleRepo.getTotalSalesByEmployeeStoreAndDate(employeeId, currentStoreId, effectiveStart, gradeEnd);
+
+            if (!isInRange(employeeSales, rule)) continue;
+
+            BigDecimal bonus = calculateIndividualBonus(gradeType, rule, employeeSales);
+            addBonusToMap(employeeBonuses, employeeId, assignment, bonus);
+        }
+    }
+
+    private boolean isStoreTargetMet(GradeType gradeType, List<GradeRule> rules, BigDecimal storeTotalSales) {
+        if (gradeType == GradeType.GRADE_THRESHOLD) {
+          return rules.stream()
+                .filter(r -> r.getTargetType() == TargetType.STORE_TOTAL_SALES)
+                .anyMatch(r -> isInRange(storeTotalSales, r));
+        }
+        // same logic for FIXED_GRADE and PERCENT_GRADE
+        return rules.stream()
+              .filter(r -> r.getTargetType() == TargetType.STORE_TOTAL_SALES)
+              .filter(r -> r.getMinThreshold() != null)
+              .noneMatch(r -> storeTotalSales.compareTo(r.getMinThreshold()) < 0);
+    }
+
+    private BigDecimal calculateStoreBonus(GradeType gradeType, GradeRule rule,
+                                           BigDecimal storeTotalSales, int qualifiedCount) {
+        if (gradeType == GradeType.FIXED_GRADE) {
+            return rule.getFixedAmount() != null ? rule.getFixedAmount() : BigDecimal.ZERO;
+        }
+        if (rule.getPercentage() == null || rule.getSharePercentage() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal totalPool = storeTotalSales
+                .multiply(rule.getPercentage())
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        BigDecimal groupPool = totalPool
+                .multiply(rule.getSharePercentage())
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        return groupPool.divide(BigDecimal.valueOf(qualifiedCount), 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateIndividualBonus(GradeType gradeType, GradeRule rule, BigDecimal employeeSales) {
+        if (gradeType == GradeType.FIXED_GRADE) {
+            return rule.getFixedAmount() != null ? rule.getFixedAmount() : BigDecimal.ZERO;
+        }
+        if (rule.getPercentage() == null) {
+            return BigDecimal.ZERO;
+        }
+        return employeeSales.multiply(rule.getPercentage())
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
     private boolean isInRange(BigDecimal sales, GradeRule rule) {
-        if (rule.getMinThreshold() != null && sales.compareTo(rule.getMinThreshold()) < 0) {
-            return false;
+        boolean satisfiesMin = rule.getMinThreshold() == null || sales.compareTo(rule.getMinThreshold()) >= 0;
+        boolean satisfiesMax = rule.getMaxThreshold() == null || sales.compareTo(rule.getMaxThreshold()) < 0;
+        return satisfiesMin && satisfiesMax;
+    }
+
+    private List<EmployeeWorkHistory> getEligibleEmployees(
+            List<GradedEmployee> gradedEmployees,
+            List<EmployeeWorkHistory> activeHistories) {
+
+        if (gradedEmployees.isEmpty()) return activeHistories;
+
+        // check if employee is still active (may have left the company)
+        Set<Integer> specificIds = gradedEmployees.stream()
+                .map(ge -> ge.getEmployee().getId())
+                .collect(Collectors.toSet());
+
+        return activeHistories.stream()
+                .filter(h -> specificIds.contains(h.getEmployee().getId()))
+                .toList();
+    }
+
+    private List<EmployeeWorkHistory> getTargetEmployees(
+            List<EmployeeWorkHistory> eligibleEmployees,
+            GradeRule rule) {
+
+        if (rule.getPosition() == null) return eligibleEmployees;
+
+        return eligibleEmployees.stream()
+                .filter(h -> h.getPosition().getId().equals(rule.getPosition().getId()))
+                .toList();
+    }
+
+    private void addBonusToMap(Map<Integer, List<BonusDetail>> bonusMap, Integer employeeId,
+                               GradeAssignment assignment, BigDecimal bonusAmount) {
+        if (bonusAmount.compareTo(BigDecimal.ZERO) > 0) {
+            bonusMap.computeIfAbsent(employeeId, k -> new ArrayList<>())
+                    .add(new BonusDetail(
+                            assignment.getGrade().getId(),
+                            assignment.getGrade().getGradeName(),
+                            bonusAmount));
         }
-        if (rule.getMaxThreshold() != null && sales.compareTo(rule.getMaxThreshold()) >= 0) {
-            return false;
+    }
+
+    private LocalDateTime resolveEffectiveStart(LocalDateTime gradeStart, LocalDateTime employeeStart) {
+        if (gradeStart.isAfter(employeeStart)) {
+            return gradeStart;
         }
-        return true;
+        return employeeStart;
     }
 }
