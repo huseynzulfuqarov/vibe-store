@@ -123,10 +123,21 @@ public class GradeServiceImpl implements GradeService {
         Grade grade = gradeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Grade not found with given id"));
 
+        return mapGradeToResponse(grade);
+    }
+
+    @Override
+    public List<GradeResponseDTO> getAllGrades() {
+        return gradeRepository.findAll().stream()
+                .map(this::mapGradeToResponse)
+                .toList();
+    }
+
+    private GradeResponseDTO mapGradeToResponse(Grade grade) {
         GradeResponseDTO responseDTO = modelMapper.map(grade, GradeResponseDTO.class);
         responseDTO.setGradeId(grade.getId());
 
-        List<GradeRule> rules = gradeRuleRepository.findAllByGradeId(id);
+        List<GradeRule> rules = gradeRuleRepository.findAllByGradeId(grade.getId());
 
         List<GradeRuleRespondDTO> ruleDtos = rules.stream()
                 .map(this::getGradeRuleRespondDTO)
@@ -206,11 +217,12 @@ public class GradeServiceImpl implements GradeService {
             if (ruleDto.getMinThreshold() == null && ruleDto.getMaxThreshold() == null) {
                 throw new IllegalArgumentException("GRADE_THRESHOLD requires at least one limit (min or max threshold).");
             }
+        }
 
-            if (ruleDto.getMinThreshold() != null && ruleDto.getMaxThreshold() != null &&
-                    ruleDto.getMinThreshold().compareTo(ruleDto.getMaxThreshold()) >= 0) {
-                throw new IllegalArgumentException("'minThreshold' must be less than 'maxThreshold'.");
-            }
+        // for all grade types: if both min and max are set, min must be less than max
+        if (ruleDto.getMinThreshold() != null && ruleDto.getMaxThreshold() != null &&
+                ruleDto.getMinThreshold().compareTo(ruleDto.getMaxThreshold()) >= 0) {
+            throw new IllegalArgumentException("'minThreshold' must be less than 'maxThreshold'.");
         }
     }
 }
