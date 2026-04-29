@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/employees")
 @RequiredArgsConstructor
@@ -26,9 +28,8 @@ public class EmployeeController {
     }
 
     @PostMapping("/changeJobDetails")
-    public ResponseEntity<Void> changeJobDetails(@RequestBody @Valid ChangeJobDetailsRequestDTO requestDto) {
-        employeeService.changeJobDetails(requestDto);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<AllEmployeeDetailsResponseDTO> changeJobDetails(@RequestBody @Valid ChangeJobDetailsRequestDTO requestDto) {
+        return ResponseEntity.ok(employeeService.changeJobDetails(requestDto));
     }
 
     @PatchMapping("/{id}/profile")
@@ -43,8 +44,18 @@ public class EmployeeController {
         return new  ResponseEntity<>(employeeService.getEmployeeById(id), HttpStatus.OK);
     }
 
+    @GetMapping
+    public ResponseEntity<List<AllEmployeeDetailsResponseDTO>> getAllEmployees() {
+        return new ResponseEntity<>(employeeService.getAllEmployees(), HttpStatus.OK);
+    }
+
     @GetMapping("/positions/{id}")
     public ResponseEntity<PositionResponseDTO> getPosition(@PathVariable Integer id) {
         return new ResponseEntity<>(employeeService.getPositionById(id), HttpStatus.OK);
+    }
+
+    @GetMapping("/positions")
+    public ResponseEntity<List<PositionResponseDTO>> getAllPositions() {
+        return new ResponseEntity<>(employeeService.getAllPositions(), HttpStatus.OK);
     }
 }

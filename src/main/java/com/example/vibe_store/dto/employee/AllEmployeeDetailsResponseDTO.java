@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class AllEmployeeDetailsResponseDTO {
+    private Integer employeeId;
     private String firstName;
     private String lastName;
     private LocalDateTime hireDate;

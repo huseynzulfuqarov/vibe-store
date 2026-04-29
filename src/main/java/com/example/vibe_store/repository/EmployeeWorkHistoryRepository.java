@@ -13,6 +13,8 @@ public interface EmployeeWorkHistoryRepository extends JpaRepository<EmployeeWor
 
     Optional<EmployeeWorkHistory> findByEmployeeIdAndIsActiveTrue(Integer employeeId);
 
+    List<EmployeeWorkHistory> findAllByIsActiveTrue();
+
     @Query("SELECT ewh FROM EmployeeWorkHistory ewh " +
             "WHERE ewh.store.id = :storeId " +
             "AND ewh.isActive = true")
@@ -26,11 +28,6 @@ public interface EmployeeWorkHistoryRepository extends JpaRepository<EmployeeWor
             @Param("storeId") Integer storeId,
             @Param("monthStart") LocalDateTime monthStart,
             @Param("monthEnd") LocalDateTime monthEnd);
-
-    @Query("SELECT ewh FROM EmployeeWorkHistory ewh " +
-            "WHERE ewh.employee.id = :employeeId " +
-            "ORDER BY ewh.startDate DESC")
-    List<EmployeeWorkHistory> findAllByEmployeeId(@Param("employeeId") Integer employeeId);
 
     Optional<EmployeeWorkHistory> findByEmployeeIdAndStoreIdAndIsActiveTrue(Integer employeeId, Integer storeId);
 

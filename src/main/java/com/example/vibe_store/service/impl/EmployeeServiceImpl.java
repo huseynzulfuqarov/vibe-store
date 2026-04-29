@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -72,7 +73,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional
-    public void changeJobDetails(ChangeJobDetailsRequestDTO requestDto) {
+    public AllEmployeeDetailsResponseDTO changeJobDetails(ChangeJobDetailsRequestDTO requestDto) {
         EmployeeWorkHistory oldWorkHistory = employeeWorkHistoryRepository
                 .findByEmployeeIdAndIsActiveTrue(requestDto.getEmployeeId())
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -120,6 +121,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         newWorkHistory.setIsActive(true);
 
         employeeWorkHistoryRepository.save(newWorkHistory);
+        return getAllEmployeeDetailsResponseDto(oldWorkHistory.getEmployee(), newWorkHistory);
     }
 
     @Transactional
@@ -164,10 +166,30 @@ public class EmployeeServiceImpl implements EmployeeService {
         return responseDTO;
     }
 
+    @Override
+    public List<AllEmployeeDetailsResponseDTO> getAllEmployees() {
+        return employeeWorkHistoryRepository.findAllByIsActiveTrue().stream()
+                .map(wh -> getAllEmployeeDetailsResponseDto(wh.getEmployee(), wh))
+                .toList();
+    }
+
+    @Override
+    public List<PositionResponseDTO> getAllPositions() {
+        return positionRepository.findAll().stream()
+                .map(position -> {
+                    PositionResponseDTO dto = new PositionResponseDTO();
+                    dto.setPositionId(position.getId());
+                    dto.setPositionName(position.getPositionName());
+                    return dto;
+                })
+                .toList();
+    }
+
     //======= HELPER METHOD =======
     private AllEmployeeDetailsResponseDTO getAllEmployeeDetailsResponseDto(Employee employee, EmployeeWorkHistory activeWorkHistory) {
         AllEmployeeDetailsResponseDTO responseDto = new AllEmployeeDetailsResponseDTO();
 
+        responseDto.setEmployeeId(employee.getId());
         responseDto.setFirstName(employee.getFirstName());
         responseDto.setLastName(employee.getLastName());
         responseDto.setHireDate(activeWorkHistory.getStartDate());
