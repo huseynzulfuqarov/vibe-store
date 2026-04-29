@@ -1,0 +1,38 @@
+#docker compose file for mysql and java
+services:
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: mydatabase
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+        - vibe-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  vibe-store:
+    build: .
+    environment:
+        DB_URL: jdbc:mysql://mysql-db/mydatabase
+        DB_USERNAME: root
+        DB_PASSWORD: rootpassword
+    container_name: vibe-store
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+        - vibe-network
+networks:
+    vibe-network:
+volumes:
+    mysql-data:
