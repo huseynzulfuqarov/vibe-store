@@ -93,7 +93,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
 
         BigDecimal storeTotalSales = saleRepo.getTotalSalesByStoreAndDate(storeId, gradeStart, gradeEnd);
 
-        if (!isStoreTargetMet(gradeType, rules, storeTotalSales)) return;
+        if (!isStoreTargetMet(rules, storeTotalSales)) return;
 
         List<GradedEmployee> gradedEmployees = gradedEmployeeRepo.findAllByGradeAssignmentId(assignment.getId());
         List<EmployeeWorkHistory> eligibleEmployees = getEligibleEmployees(gradedEmployees, activeHistories);
@@ -136,6 +136,8 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
             }
         }
 
+        if (qualifiedIds.isEmpty()) return;
+
         BigDecimal bonusPerPerson = calculateStoreBonus(gradeType, rule, storeTotalSales, qualifiedIds.size());
 
         if (bonusPerPerson.compareTo(BigDecimal.ZERO) > 0) {
@@ -174,17 +176,16 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
         }
     }
 
-    private boolean isStoreTargetMet(GradeType gradeType, List<GradeRule> rules, BigDecimal storeTotalSales) {
-        if (gradeType == GradeType.GRADE_THRESHOLD) {
-          return rules.stream()
+    private boolean isStoreTargetMet(List<GradeRule> rules, BigDecimal storeTotalSales) {
+        List<GradeRule> storeRules = rules.stream()
                 .filter(r -> r.getTargetType() == TargetType.STORE_TOTAL_SALES)
-                .anyMatch(r -> isInRange(storeTotalSales, r));
-        }
-        // same logic for FIXED_GRADE and PERCENT_GRADE
-        return rules.stream()
-              .filter(r -> r.getTargetType() == TargetType.STORE_TOTAL_SALES)
-              .filter(r -> r.getMinThreshold() != null)
-              .noneMatch(r -> storeTotalSales.compareTo(r.getMinThreshold()) < 0);
+                .toList();
+
+        // no store-level rule means no store limit — always pass
+        if (storeRules.isEmpty()) return true;
+
+        // for all grade types: at least one store rule's range must be satisfied
+        return storeRules.stream().anyMatch(r -> isInRange(storeTotalSales, r));
     }
 
     private BigDecimal calculateStoreBonus(GradeType gradeType, GradeRule rule,

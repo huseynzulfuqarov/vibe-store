@@ -56,6 +56,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<MyErrorResponse> handleGlobalException(
             Exception ex, HttpServletRequest request) {
 
+        System.err.println("GLOBAL EXCEPTION on " + request.getRequestURI() + ": " + ex.getMessage());
+        ex.printStackTrace();
+
         MyErrorResponse myErrorResponse = MyErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
