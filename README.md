@@ -25,13 +25,18 @@ rule-based bonus system.
 - **Payroll Calculation** — Monthly payroll per store or per employee, 
   with prorated salary based on days worked and automatic bonus aggregation. 
   Handles mid-month store transfers correctly.
+- **AI Assistant (RAG & Function Calling)** — Integrated Spring AI with Gemini 
+  to answer queries based on custom documents (RAG) and execute database 
+  lookups (Store info, Employee salaries, Sales) via function calling.
 
 ## Tech Stack
 
 - Java 21
 - Spring Boot
 - Spring Data JPA / Hibernate
+- Spring AI (Google GenAI, Vector Store)
 - MySQL
+- Docker & Docker Compose
 - ModelMapper
 - Lombok
 - Jakarta Validation
@@ -45,15 +50,30 @@ rule-based bonus system.
 | GET | `/api/stores/{id}` | Get store by ID |
 | DELETE | `/api/stores/{id}` | Delete a store |
 | POST | `/api/employees` | Hire an employee |
+| GET | `/api/employees` | Get all employees |
 | GET | `/api/employees/{id}` | Get employee by ID |
 | PATCH | `/api/employees/{id}/profile` | Update employee profile |
 | POST | `/api/employees/changeJobDetails` | Transfer or update job details |
 | POST | `/api/employees/positions` | Create a position |
+| GET | `/api/employees/positions` | Get all positions |
 | GET | `/api/employees/positions/{id}` | Get position by ID |
 | POST | `/api/grades` | Create a grade |
+| GET | `/api/grades` | Get all grades |
 | GET | `/api/grades/{id}` | Get grade by ID |
 | POST | `/api/grades/{id}/rules` | Add a rule to a grade |
 | POST | `/api/grades/assign` | Assign a grade to a store or employee |
 | POST | `/api/sales` | Record a sale |
 | POST | `/api/payroll/store/{storeId}/calculate` | Calculate payroll for a store |
 | POST | `/api/payroll/employee/{employeeId}/calculate` | Calculate payroll for an employee |
+| POST | `/api/ai/documents` | Add documents to Vector Store |
+| POST | `/api/ai/ask` | Ask question using RAG |
+| GET | `/api/ai/ask/simple` | Ask question directly to Gemini |
+| POST | `/api/ai/ask/with-tools` | Ask question using Function Calling |
+
+## Run with Docker
+
+To run the application and MySQL database in containers:
+
+```bash
+docker compose up -d
+```
