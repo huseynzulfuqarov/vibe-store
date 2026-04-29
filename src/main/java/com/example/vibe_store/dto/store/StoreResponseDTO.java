@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Setter
 public class StoreResponseDTO {
 
+    private Integer storeId;
     private String storeName;
     private String storeAddress;
     private String warehouseName;

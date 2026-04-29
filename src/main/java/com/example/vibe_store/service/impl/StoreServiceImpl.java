@@ -38,14 +38,20 @@ public class StoreServiceImpl implements StoreService {
     public StoreResponseDTO getStoreById(Integer id) {
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Store not found with ID: " + id));
-        return modelMapper.map(store, StoreResponseDTO.class);
+        StoreResponseDTO dto = modelMapper.map(store, StoreResponseDTO.class);
+        dto.setStoreId(store.getId());
+        return dto;
     }
 
     @Override
     public List<StoreResponseDTO> getAllStores() {
         List<Store> stores = storeRepository.findAllWithWarehouse();
         return stores.stream()
-                .map(store -> modelMapper.map(store, StoreResponseDTO.class))
+                .map(store -> {
+                    StoreResponseDTO dto = modelMapper.map(store, StoreResponseDTO.class);
+                    dto.setStoreId(store.getId());
+                    return dto;
+                })
                 .toList();
     }
 
