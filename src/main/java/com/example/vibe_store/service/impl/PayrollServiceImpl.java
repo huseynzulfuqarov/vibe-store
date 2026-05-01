@@ -12,6 +12,7 @@ import com.example.vibe_store.exception.ResourceNotFoundException;
 import com.example.vibe_store.repository.*;
 import com.example.vibe_store.service.BonusCalculationService;
 import com.example.vibe_store.service.PayrollService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PayrollServiceImpl implements PayrollService {
@@ -39,8 +41,11 @@ public class PayrollServiceImpl implements PayrollService {
     @Transactional
     public List<PayrollResponseDTO> calculatePayrollForStore(Integer storeId, YearMonth targetMonth) {
 
-    /*  Temporary disabled for testing purposes
+        log.info("Start payroll calculation for storeId={}, month={}", storeId, targetMonth);
+
+     /* Temporary disabled for testing purposes
         if (!targetMonth.isBefore(YearMonth.now())) {
+            log.warn("Attempted to calculate payroll for non-completed month: {}. Operation is not allowed.", targetMonth);
             throw new IllegalArgumentException("Payroll can only be calculated for completed months.");
         }*/
 
@@ -54,6 +59,8 @@ public class PayrollServiceImpl implements PayrollService {
         //target ayda bu magazada islemis ve ya hazirda isleyen butun isciler
         List<EmployeeWorkHistory> histories =
                 workHistoryRepository.findAllWorkedInStoreAndMonth(storeId, monthStart, monthEnd);
+
+        log.debug("Found {} employees for storeId={}, month={}", histories.size(), storeId, monthStr);
 
         if (histories.isEmpty()) {
             throw new ResourceNotFoundException("No employees found for store: " + storeId);
@@ -74,8 +81,11 @@ public class PayrollServiceImpl implements PayrollService {
             Employee employee = history.getEmployee();
             Integer employeeId = employee.getId();
 
+            log.debug("Processing employeeId={} for storeId={}", employeeId, storeId);
+
             Optional<Payroll> existingPayroll = payrollRepository.findByEmployeeIdAndPayrollMonthAndStoreId(employeeId, monthStr, storeId);
             if (existingPayroll.isPresent()) {
+                log.debug("Existing payroll found for employeeId={}, skipping", employeeId);
                 results.add(mapToResponseDTO(existingPayroll.get()));
                 continue;
             }
@@ -83,7 +93,13 @@ public class PayrollServiceImpl implements PayrollService {
             Store store = history.getStore();
             Payroll payroll = calculateAndBuildPayroll(targetMonth, monthStr, history, employee, store, storeBonuses, personalBonuses);
             results.add(mapToResponseDTO(payrollRepository.save(payroll)));
+
+            log.info("Payroll saved for employeeId={}, storeId={}, totalAmount={}",
+                    employeeId, storeId, payroll.getTotalAmount());
         }
+
+        log.info("Payroll calculation completed for storeId={}, month={}, totalEmployees={}",
+                storeId, targetMonth, results.size());
 
         return results;
     }
@@ -92,12 +108,17 @@ public class PayrollServiceImpl implements PayrollService {
     @Transactional
     public List<PayrollResponseDTO> calculatePayrollForEmployee(Integer employeeId, YearMonth targetMonth) {
 
+        log.info("Start payroll calculation for employeeId={}, month={}", employeeId, targetMonth);
+
         LocalDateTime monthStart = targetMonth.atDay(1).atStartOfDay();
         LocalDateTime monthEnd   = targetMonth.atEndOfMonth().atTime(23, 59, 59);
         String monthStr = targetMonth.toString();
 
         List<EmployeeWorkHistory> histories =
                 workHistoryRepository.findAllByEmployeeIdAndMonth(employeeId, monthStart, monthEnd);
+
+        log.debug("Found {} work history records for employeeId={}, month={}",
+                histories.size(), employeeId, monthStr);
 
         if (histories.isEmpty()) {
             throw new ResourceNotFoundException("No work history found for employee " + employeeId + " in " + monthStr);
@@ -110,13 +131,19 @@ public class PayrollServiceImpl implements PayrollService {
             Store store = history.getStore();
             Integer storeId = store.getId();
 
+            log.debug("Processing employeeId={}, storeId={}", employeeId, storeId);
+
             Optional<Payroll> existingPayroll = payrollRepository.findByEmployeeIdAndPayrollMonthAndStoreId(employeeId, monthStr, storeId);
             if (existingPayroll.isPresent()) {
+                log.debug("Existing payroll found for employeeId={}, storeId={}, skipping", employeeId, storeId);
                 results.add(mapToResponseDTO(existingPayroll.get()));
                 continue;
             }
 
             boolean isActive = Boolean.TRUE.equals(history.getIsActive());
+
+            log.debug("Calculating bonuses for employeeId={}, storeId={}, isActive={}",
+                    employeeId, storeId, isActive);
 
             Map<Integer, List<BonusDetail>> storeBonuses = bonusCalculationService.calculateBonusWithStore(storeId, targetMonth);
             Map<Integer, List<BonusDetail>> personalBonuses = isActive
@@ -125,7 +152,13 @@ public class PayrollServiceImpl implements PayrollService {
 
             Payroll payroll = calculateAndBuildPayroll(targetMonth, monthStr, history, employee, store, storeBonuses, personalBonuses);
             results.add(mapToResponseDTO(payrollRepository.save(payroll)));
+
+            log.info("Payroll saved for employeeId ={}, storeId={}, totalAmount={}",
+                    employeeId, storeId, payroll.getTotalAmount());
         }
+
+        log.info("Completed payroll calculation for employeeId={}, month={}, totalRecords={}",
+                employeeId, monthStr, results.size());
 
         return results;
     }
@@ -133,6 +166,9 @@ public class PayrollServiceImpl implements PayrollService {
     private Payroll calculateAndBuildPayroll(YearMonth targetMonth, String monthStr, EmployeeWorkHistory history, Employee employee, Store store, Map<Integer, List<BonusDetail>> storeBonuses, Map<Integer, List<BonusDetail>> personalBonuses) {
 
         Integer employeeId = employee.getId();
+
+        log.debug("Calculating payroll details for employeeId={}, storeId={}", employeeId, store.getId());
+
         //burada meblegin nece hasablandigi qeyd olunur, bonus ve maas ucun
         StringBuilder details = new StringBuilder();
         details.append(String.format("Store: %s. Employee: %s %s. ", store.getStoreName(), employee.getFirstName(), employee.getLastName()));
@@ -140,6 +176,9 @@ public class PayrollServiceImpl implements PayrollService {
         BigDecimal baseSalary = calculateProportionalSalary(history, targetMonth, details);
         BigDecimal bonusAmount = collectBonuses(employee, employeeId, store, monthStr, storeBonuses, personalBonuses, details);
         BigDecimal totalAmount = baseSalary.add(bonusAmount).setScale(2, RoundingMode.HALF_UP);
+
+        log.debug("Calculated payroll -> employeeId={}, baseSalary={}, bonus={}, total={}",
+                employeeId, baseSalary, bonusAmount, totalAmount);
 
         details.append(String.format("Total: %.2f AZN (Salary: %.2f + Bonus: %.2f)", totalAmount, baseSalary, bonusAmount));
 
@@ -149,6 +188,9 @@ public class PayrollServiceImpl implements PayrollService {
     private BigDecimal calculateProportionalSalary(EmployeeWorkHistory history,
                                                    YearMonth targetMonth,
                                                    StringBuilder details) {
+
+        log.trace("Calculating proportional salary for employeeId={}", history.getEmployee().getId());
+
         int totalDaysInMonth = targetMonth.lengthOfMonth();
         LocalDate monthStart  = targetMonth.atDay(1);
         LocalDate monthEnd    = targetMonth.atEndOfMonth();
@@ -188,6 +230,8 @@ public class PayrollServiceImpl implements PayrollService {
                                       Map<Integer, List<BonusDetail>> storeBonuses,
                                       Map<Integer, List<BonusDetail>> personalBonuses,
                                       StringBuilder details) {
+        log.debug("Collecting bonuses for employeeId={}, storeId={}", employeeId, store.getId());
+
         //iscinin bonuslarini tek bir listde birlesdirmek ucn
         List<BonusDetail> allBonusDetails = new ArrayList<>();
         allBonusDetails.addAll(storeBonuses.getOrDefault(employeeId, Collections.emptyList()));
@@ -196,6 +240,10 @@ public class PayrollServiceImpl implements PayrollService {
         BigDecimal totalBonus = BigDecimal.ZERO;
 
         for (BonusDetail bonusDetail : allBonusDetails) {
+
+            log.trace("Applying bonus -> employeeId={}, gradeId={}, amount={}",
+                    employeeId, bonusDetail.getGradeId(), bonusDetail.getBonusAmount());
+
             totalBonus = totalBonus.add(bonusDetail.getBonusAmount());
 
             details.append(String.format("%s bonusu: %.2f AZN. ",
@@ -219,6 +267,9 @@ public class PayrollServiceImpl implements PayrollService {
     private Payroll buildPayroll(Employee employee, Store store, String monthStr,
                                  BigDecimal baseSalary, BigDecimal bonusAmount,
                                  BigDecimal totalAmount, String details) {
+
+        log.trace("Building payroll entity for employeeId={}, storeId={}", employee.getId(), store.getId());
+
         Payroll payroll = new Payroll();
         payroll.setEmployee(employee);
         payroll.setStore(store);
@@ -231,6 +282,9 @@ public class PayrollServiceImpl implements PayrollService {
     }
 
     private PayrollResponseDTO mapToResponseDTO(Payroll payroll) {
+
+        log.trace("Mapping payroll to DTO for employeeId={}", payroll.getEmployee().getId());
+
         PayrollResponseDTO dto = new PayrollResponseDTO();
         dto.setPayrollId(payroll.getId());
         dto.setEmployeeId(payroll.getEmployee().getId());

@@ -11,6 +11,7 @@ import com.example.vibe_store.exception.ResourceNotFoundException;
 import com.example.vibe_store.repository.*;
 import com.example.vibe_store.service.BonusCalculationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ import java.time.YearMonth;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BonusCalculationServiceImpl implements BonusCalculationService {
@@ -47,6 +49,9 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
 
         List<GradeAssignment> assignments = gradeAssignmentRepo
                 .findByStoreIdAndEndDateInTargetMonth(storeId, startOfMonth, endOfMonth);
+
+        log.debug("Store bonus calculation: storeId={}, month={}, assignmentsFound={}",
+                storeId, targetMonth, assignments.size());
 
         for (GradeAssignment assignment : assignments) {
           processStoreAssignment(assignment, storeId, activeHistories, employeeBonuses);
@@ -77,6 +82,9 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
             processIndividualAssignment(assignment, employeeId, activeHistory, employeeBonuses);
           }
       }
+
+        log.debug("Personal bonus calculation completed: month={}, employeeCount={}",
+                targetMonth, employeeIds.size());
 
       return employeeBonuses;
     }

@@ -12,6 +12,7 @@ import com.example.vibe_store.repository.EmployeeRepository;
 import com.example.vibe_store.repository.EmployeeWorkHistoryRepository;
 import com.example.vibe_store.repository.PositionRepository;
 import com.example.vibe_store.repository.StoreRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -23,6 +24,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
@@ -34,11 +36,13 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public PositionResponseDTO createPosition(CreatePositionRequestDTO requestDto) {
         if (positionRepository.existsByPositionName(requestDto.getPositionName())) {
+            log.warn("Position name {} exists", requestDto.getPositionName());
             throw new IllegalArgumentException("A position with this name already exists.");
         }
 
         Position position = modelMapper.map(requestDto, Position.class);
         position = positionRepository.save(position);
+        log.info("Position created: {}", position.getPositionName());
         return getPositionById(position.getId());
     }
 
@@ -47,6 +51,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     public AllEmployeeDetailsResponseDTO hireEmployee(HireEmployeeRequestDTO requestDto) {
 
         if (employeeRepository.existsByEmail(requestDto.getEmail())) {
+            log.warn("Email {} exists", requestDto.getEmail());
             throw new IllegalArgumentException("An employee with this email already exists!");
         }
 
@@ -67,6 +72,10 @@ public class EmployeeServiceImpl implements EmployeeService {
         workHistory.setIsActive(true);
 
         employeeWorkHistoryRepository.saveAndFlush(workHistory);
+
+        log.info("Employee hired: {} {}, Position: {}, Store: {}, Salary: {}",
+                employee.getFirstName(), employee.getLastName(),
+                position.getPositionName(), store.getStoreName(), workHistory.getSalary());
 
         return getEmployeeById(employee.getId());
     }
@@ -96,6 +105,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         boolean isSalaryChanged = oldWorkHistory.getSalary().compareTo(newSalary) != 0;
 
         if (!isStoreChanged && !isPositionChanged && !isSalaryChanged) {
+            log.warn("No changes detected for employee ID {}. Store, position, and salary are the same.", requestDto.getEmployeeId());
             throw new IllegalArgumentException("No changes detected! Employee already has these details.");
         }
 
@@ -121,6 +131,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         newWorkHistory.setIsActive(true);
 
         employeeWorkHistoryRepository.save(newWorkHistory);
+        log.info("Employee {} has changed: {}", oldWorkHistory.getEmployee().getId(), newWorkHistory.getEmployee().getId());
         return getAllEmployeeDetailsResponseDto(oldWorkHistory.getEmployee(), newWorkHistory);
     }
 
@@ -133,12 +144,15 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (requestDto.getEmail() != null
                 && !requestDto.getEmail().equals(employee.getEmail())
                 && employeeRepository.existsByEmail(requestDto.getEmail())) {
+            log.warn("This email {} is already in use.", requestDto.getEmail());;
             throw new AlreadyExistsException("This email is already in use: " + requestDto.getEmail());
         }
 
         modelMapper.map(requestDto, employee);
 
         Employee saved = employeeRepository.save(employee);
+
+        log.info("Employee {} has changed profile information", employee.getId());
 
         return modelMapper.map(saved, EmployeeProfileResponseDTO.class);
     }

@@ -9,10 +9,12 @@ import com.example.vibe_store.repository.EmployeeWorkHistoryRepository;
 import com.example.vibe_store.repository.SaleRepository;
 import com.example.vibe_store.service.SaleService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SaleServiceImpl implements SaleService {
@@ -33,6 +35,7 @@ public class SaleServiceImpl implements SaleService {
         sale.setStore(workHistory.getStore());
         sale.setEmployee(workHistory.getEmployee());
         Sale savedSale = saleRepository.save(sale);
+        log.info("New sale created with ID: {}", savedSale.getId());
 
         SaleResponseDTO responseDTO = modelMapper.map(savedSale, SaleResponseDTO.class);
         responseDTO.setEmployeeId(savedSale.getEmployee().getId());

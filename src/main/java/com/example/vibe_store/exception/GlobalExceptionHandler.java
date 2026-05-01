@@ -1,6 +1,8 @@
 package com.example.vibe_store.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -13,10 +15,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<MyErrorResponse> handleResourceNotFoundException(
             ResourceNotFoundException ex, HttpServletRequest request) {
+
+        log.warn("Resource not found: path={}, message={}", request.getRequestURI(), ex.getMessage());
 
         MyErrorResponse myErrorResponse = MyErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -56,8 +61,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<MyErrorResponse> handleGlobalException(
             Exception ex, HttpServletRequest request) {
 
-        System.err.println("GLOBAL EXCEPTION on " + request.getRequestURI() + ": " + ex.getMessage());
-        ex.printStackTrace();
+        log.error("GLOBAL EXCEPTION on {}: {}", request.getRequestURI(), ex.getMessage(), ex);
 
         MyErrorResponse myErrorResponse = MyErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -70,9 +74,11 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(myErrorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<MyErrorResponse> handleDataIntegrityViolationException(
-            org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
+            DataIntegrityViolationException ex, HttpServletRequest request) {
+
+        log.warn("Data integrity violation: path={}, message={}", request.getRequestURI(), ex.getMessage(), ex);
 
         MyErrorResponse myErrorResponse = MyErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -89,6 +95,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<MyErrorResponse> handleIllegalArgumentException(
             IllegalArgumentException ex, HttpServletRequest request) {
 
+        log.warn("Illegal argument: path={}, message={}", request.getRequestURI(), ex.getMessage());
+
         MyErrorResponse myErrorResponse = MyErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
@@ -103,6 +111,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AlreadyExistsException.class)
     public ResponseEntity<MyErrorResponse> handleAlreadyExistsException(
             AlreadyExistsException ex, HttpServletRequest request) {
+        log.warn("Already exists: path={}, message={}", request.getRequestURI(), ex.getMessage());
+
         MyErrorResponse response = MyErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())

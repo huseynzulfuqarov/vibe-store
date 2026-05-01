@@ -1,5 +1,6 @@
 package com.example.vibe_store.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
@@ -10,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import java.io.File;
 
 @Configuration
+@Slf4j
 public class AiConfig {
 
     @Bean
@@ -37,14 +39,14 @@ public class AiConfig {
         if (vectorFile.exists() && vectorFile.length() > 0) {
             try {
                 store.load(vectorFile);
-                System.out.println("Vektor bazası fayldan yükləndi: " + vectorFile.getAbsolutePath());
+                log.info("Vektor bazası fayldan yükləndi: {}", vectorFile.getAbsolutePath());
             } catch (Exception e) {
-                System.err.println("Vektor faylı oxuna bilmədi (ola bilsin zədələnib və ya yarımçıq qalıb): " + e.getMessage());
-                System.err.println("Korlanmış fayl silinir, yeni baza yaradılacaq...");
+                log.error("Vektor faylı oxuna bilmədi (ola bilsin zədələnib və ya yarımçıq qalıb): {}", e.getMessage());
+                log.info("Korlanmış fayl silinir, yeni baza yaradılacaq...");
                 vectorFile.delete();
             }
         } else {
-            System.out.println("Vektor bazası boşdur (və ya yoxdur). /api/ai/documents ilə sənəd əlavə edin.");
+            log.info("Vektor bazası boşdur (və ya yoxdur). /api/ai/documents ilə sənəd əlavə edin.");
         }
 
         return store;

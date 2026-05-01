@@ -13,6 +13,7 @@ import com.example.vibe_store.enums.TargetType;
 import com.example.vibe_store.exception.ResourceNotFoundException;
 import com.example.vibe_store.repository.*;
 import com.example.vibe_store.service.GradeService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -22,6 +23,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class GradeServiceImpl implements GradeService {
@@ -54,6 +56,7 @@ public class GradeServiceImpl implements GradeService {
                buildAndSaveGradeRule(newGrade, ruleDto);
             }
         }
+        log.info("Grade {} created successfully",  requestDTO.getGradeName());
         return getGradeById(newGrade.getId());
     }
 
@@ -68,6 +71,7 @@ public class GradeServiceImpl implements GradeService {
 
         GradeRule newRule = buildAndSaveGradeRule(grade, requestDTO);
 
+        log.info("GradeRule for Grade {} created successfully",  grade.getGradeName());
         return getGradeRuleRespondDTO(newRule);
     }
 
@@ -77,6 +81,7 @@ public class GradeServiceImpl implements GradeService {
 
         if (requestDTO.getStartDate() != null && requestDTO.getEndDate() != null
                 && !requestDTO.getStartDate().isBefore(requestDTO.getEndDate())) {
+            log.warn("Start date {} must be before end date {}", requestDTO.getStartDate(), requestDTO.getEndDate());
             throw new IllegalArgumentException("Start date must be before end date");
         }
 
@@ -104,6 +109,7 @@ public class GradeServiceImpl implements GradeService {
         }
 
         GradeAssignment savedAssignment = gradeAssignmentRepository.save(newGradeAssignment);
+        log.info("GradeAssignment for Grade {} created successfully", grade.getGradeName());
 
         if (requestDTO.getEmployeeIds() != null && !requestDTO.getEmployeeIds().isEmpty()) {
             for (Integer employeeId : requestDTO.getEmployeeIds()) {
@@ -113,6 +119,8 @@ public class GradeServiceImpl implements GradeService {
                 GradedEmployee gradedEmployee = new GradedEmployee();
                 gradedEmployee.setEmployee(employee);
                 gradedEmployee.setGradeAssignment(savedAssignment);
+
+                log.info("Employee {} added to GradeAssignment {}", employeeId, savedAssignment.getId());
                 gradedEmployeeRepository.save(gradedEmployee);
             }
         }

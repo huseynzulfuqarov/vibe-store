@@ -1,6 +1,7 @@
 package com.example.vibe_store.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.embedding.EmbeddingModel;
 import com.example.vibe_store.config.ToolsConfig;
 import org.springframework.ai.chat.client.ChatClient;
@@ -18,6 +19,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RagService {
 
     private final ChatClient chatClient;
@@ -31,7 +33,7 @@ public class RagService {
 
         if (vectorFile.exists()) {
             vectorFile.delete();
-            System.out.println("Köhnə vektor faylı silindi.");
+            log.info("Köhnə vektor faylı silindi: {}", vectorFile.getAbsolutePath());
         }
 
         int CHUNK_SIZE = 800;
@@ -102,7 +104,7 @@ public class RagService {
         if (vectorStore instanceof SimpleVectorStore simpleStore) {
             File vectorFile = new File("ai-data", "vector-store.json");
             simpleStore.save(vectorFile);
-            System.out.println("Vektor bazası faylda saxlandı: " + vectorFile.getAbsolutePath());
+            log.info("Vektor bazası faylda saxlandı: {}", vectorFile.getAbsolutePath());
         }
     }
 
