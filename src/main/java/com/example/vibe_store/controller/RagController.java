@@ -2,6 +2,7 @@ package com.example.vibe_store.controller;
 
 import com.example.vibe_store.service.RagService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,6 +19,7 @@ public class RagController {
         this.ragService = ragService;
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/documents")
     public ResponseEntity<Map<String, String>> addDocuments(@RequestBody Map<String, List<String>> request) {
         List<String> texts = request.get("texts");

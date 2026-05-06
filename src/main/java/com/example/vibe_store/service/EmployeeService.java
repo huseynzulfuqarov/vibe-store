@@ -8,7 +8,7 @@ public interface EmployeeService {
 
     PositionResponseDTO createPosition(CreatePositionRequestDTO requestDto);
 
-    AllEmployeeDetailsResponseDTO hireEmployee(HireEmployeeRequestDTO hireEmployeeRequestDto);
+    HireEmployeeResponseDTO hireEmployee(HireEmployeeRequestDTO hireEmployeeRequestDto);
 
     AllEmployeeDetailsResponseDTO changeJobDetails(ChangeJobDetailsRequestDTO changeJobDetailsRequestDto);
 

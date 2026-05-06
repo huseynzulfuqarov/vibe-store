@@ -2,6 +2,8 @@ package com.example.vibe_store.service.impl;
 
 import com.example.vibe_store.dto.employee.*;
 import com.example.vibe_store.entity.Store;
+import com.example.vibe_store.entity.User;
+import com.example.vibe_store.enums.Role;
 import com.example.vibe_store.exception.AlreadyExistsException;
 import com.example.vibe_store.service.EmployeeService;
 import com.example.vibe_store.entity.employee.Employee;
@@ -12,7 +14,9 @@ import com.example.vibe_store.repository.EmployeeRepository;
 import com.example.vibe_store.repository.EmployeeWorkHistoryRepository;
 import com.example.vibe_store.repository.PositionRepository;
 import com.example.vibe_store.repository.StoreRepository;
+import com.example.vibe_store.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +36,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeWorkHistoryRepository employeeWorkHistoryRepository;
     private final StoreRepository storeRepository;
     private final PositionRepository positionRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
 
     @Override
@@ -48,7 +55,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     @Transactional
-    public AllEmployeeDetailsResponseDTO hireEmployee(HireEmployeeRequestDTO requestDto) {
+    public HireEmployeeResponseDTO hireEmployee(HireEmployeeRequestDTO requestDto) {
 
         if (employeeRepository.existsByEmail(requestDto.getEmail())) {
             log.warn("Email {} exists", requestDto.getEmail());
@@ -73,11 +80,27 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         employeeWorkHistoryRepository.saveAndFlush(workHistory);
 
-        log.info("Employee hired: {} {}, Position: {}, Store: {}, Salary: {}",
-                employee.getFirstName(), employee.getLastName(),
-                position.getPositionName(), store.getStoreName(), workHistory.getSalary());
+        String username = generateUsername(requestDto.getEmail(), requestDto.getFirstName(), requestDto.getLastName());
+        String tempPassword = generateTempPassword();
 
-        return getEmployeeById(employee.getId());
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(requestDto.getEmail());
+        user.setPassword(passwordEncoder.encode(tempPassword));
+        user.setRole(Role.EMPLOYEE);
+        user.setEmployee(employee);
+        userRepository.save(user);
+
+        log.info("Employee hired: {} {}, Position: {}, Store: {}, Salary: {}, Username: {}",
+                employee.getFirstName(), employee.getLastName(),
+                position.getPositionName(), store.getStoreName(), workHistory.getSalary(), username);
+
+        HireEmployeeResponseDTO response = new HireEmployeeResponseDTO();
+        response.setEmployeeDetails(getEmployeeById(employee.getId()));
+        response.setGeneratedUsername(username);
+        response.setTemporaryPassword(tempPassword);
+
+        return response;
     }
 
     @Override
@@ -214,5 +237,28 @@ public class EmployeeServiceImpl implements EmployeeService {
         responseDto.setCurrentStoreName(activeWorkHistory.getStore().getStoreName());
         responseDto.setCurrentPositionName(activeWorkHistory.getPosition().getPositionName());
         return responseDto;
+    }
+
+    private String generateUsername(String email, String firstName, String lastName) {
+        String baseUsername = email.split("@")[0].toLowerCase();
+
+        if (!userRepository.existsByUsername(baseUsername)) {
+            return baseUsername;
+        }
+
+        String altUsername = (firstName + "." + lastName).toLowerCase().replaceAll("\\s+", "");
+        if (!userRepository.existsByUsername(altUsername)) {
+            return altUsername;
+        }
+
+        int counter = 1;
+        while (userRepository.existsByUsername(altUsername + counter)) {
+            counter++;
+        }
+        return altUsername + counter;
+    }
+
+    private String generateTempPassword() {
+        return UUID.randomUUID().toString().substring(0, 8);
     }
 }
