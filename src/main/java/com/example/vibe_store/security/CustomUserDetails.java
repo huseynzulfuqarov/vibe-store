@@ -18,6 +18,10 @@ public class CustomUserDetails implements UserDetails {
         return user.getEmployee() == null ? null : user.getEmployee().getId();
     }
 
+    public Integer getStoreId() {
+        return user.getStore() == null ? null : user.getStore().getId();
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));

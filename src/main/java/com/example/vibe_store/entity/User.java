@@ -35,6 +35,10 @@ public class User {
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id")
+    private Store store;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

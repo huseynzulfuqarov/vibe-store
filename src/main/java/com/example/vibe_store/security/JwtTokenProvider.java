@@ -35,6 +35,7 @@ public class JwtTokenProvider {
                 .claim("type", "access")
                 .claim("role", user.getAuthorities().iterator().next().getAuthority())
                 .claim("employeeId", user.getEmployeeId())
+                .claim("storeId", user.getStoreId())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwt.accessTokenExpiration()))
                 .signWith(getSigningKey())
@@ -101,6 +102,15 @@ public class JwtTokenProvider {
                 .parseSignedClaims(token)
                 .getPayload()
                 .get("employeeId", Integer.class);
+    }
+
+    public Integer extractStoreId(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("storeId", Integer.class);
     }
 
     public String extractToken(String authHeader) {

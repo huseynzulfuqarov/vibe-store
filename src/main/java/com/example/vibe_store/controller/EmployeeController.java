@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,21 +18,25 @@ public class EmployeeController {
 
     private final EmployeeService employeeService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/positions")
     public ResponseEntity<PositionResponseDTO> createPosition(@RequestBody @Valid CreatePositionRequestDTO requestDto) {
         return new ResponseEntity<>(employeeService.createPosition(requestDto), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
-    public ResponseEntity<AllEmployeeDetailsResponseDTO> hireEmployee(@RequestBody @Valid HireEmployeeRequestDTO requestDto) {
+    public ResponseEntity<HireEmployeeResponseDTO> hireEmployee(@RequestBody @Valid HireEmployeeRequestDTO requestDto) {
         return new ResponseEntity<>(employeeService.hireEmployee(requestDto), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/changeJobDetails")
     public ResponseEntity<AllEmployeeDetailsResponseDTO> changeJobDetails(@RequestBody @Valid ChangeJobDetailsRequestDTO requestDto) {
         return ResponseEntity.ok(employeeService.changeJobDetails(requestDto));
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @ownerChecker.isOwner(#id, authentication)") // Spring MVC ArgumentResolver ile gonderilir authentication
     @PatchMapping("/{id}/profile")
     public ResponseEntity<EmployeeProfileResponseDTO> updateProfile(
             @PathVariable Integer id,
@@ -39,21 +44,25 @@ public class EmployeeController {
         return new ResponseEntity<>(employeeService.updateEmployeeProfile(id, requestDto), HttpStatus.ACCEPTED);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or @ownerChecker.isOwner(#id, authentication)")
     @GetMapping("/{id}")
     public ResponseEntity<AllEmployeeDetailsResponseDTO> getEmployeeById(@PathVariable Integer id) {
         return new  ResponseEntity<>(employeeService.getEmployeeById(id), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping
     public ResponseEntity<List<AllEmployeeDetailsResponseDTO>> getAllEmployees() {
         return new ResponseEntity<>(employeeService.getAllEmployees(), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping("/positions/{id}")
     public ResponseEntity<PositionResponseDTO> getPosition(@PathVariable Integer id) {
         return new ResponseEntity<>(employeeService.getPositionById(id), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping("/positions")
     public ResponseEntity<List<PositionResponseDTO>> getAllPositions() {
         return new ResponseEntity<>(employeeService.getAllPositions(), HttpStatus.OK);

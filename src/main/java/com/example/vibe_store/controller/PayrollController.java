@@ -4,6 +4,7 @@ import com.example.vibe_store.dto.payroll.PayrollResponseDTO;
 import com.example.vibe_store.service.PayrollService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.YearMonth;
@@ -16,6 +17,7 @@ public class PayrollController {
 
     private final PayrollService payrollService;
 
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MANAGER') and @ownerChecker.isStoreManager(#id, authentication))")
     @PostMapping("/store/{storeId}/calculate")
     public ResponseEntity<List<PayrollResponseDTO>> calculatePayrollForStore(
             @PathVariable Integer storeId,
@@ -24,6 +26,7 @@ public class PayrollController {
         return ResponseEntity.ok(payrollService.calculatePayrollForStore(storeId, targetMonth));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/employee/{employeeId}/calculate")
     public ResponseEntity<List<PayrollResponseDTO>> calculatePayrollForEmployee(
             @PathVariable Integer employeeId,

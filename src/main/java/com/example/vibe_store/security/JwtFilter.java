@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -21,7 +19,6 @@ import java.util.List;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final UserDetailsService userDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -30,28 +27,38 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
 
-        String token = jwtTokenProvider.extractToken(header);
-
-        if (!"access".equals(jwtTokenProvider.extractTokenType(token))) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        if (header == null || !header.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
             return;
         }
 
-        boolean matches = jwtTokenProvider.validateToken(token);
-        if (!matches) {
+        String token = jwtTokenProvider.extractToken(header);
+
+        if (!jwtTokenProvider.validateToken(token)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Token invalid");
             return;
         }
 
+        if (!"access".equals(jwtTokenProvider.extractTokenType(token))) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Only access tokens are allowed");
+            return;
+        }
+
         String username = jwtTokenProvider.extractUsername(token);
         String role = jwtTokenProvider.extractRole(token);
+        Integer employeeId = jwtTokenProvider.extractEmployeeId(token);
+        Integer storeId = jwtTokenProvider.extractStoreId(token);
+
+        JwtPrincipal principal = new JwtPrincipal(username, employeeId, storeId);
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                username, null, List.of(new SimpleGrantedAuthority(role))
+                principal, null, List.of(new SimpleGrantedAuthority(role))
         );
 
         SecurityContextHolder.getContext().setAuthentication(auth);
         filterChain.doFilter(request, response);
     }
 }
+

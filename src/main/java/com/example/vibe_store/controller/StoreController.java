@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,22 +19,26 @@ public class StoreController {
 
     private final StoreService storeService;
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<StoreResponseDTO> createStore(@Valid @RequestBody CreateStoreRequestDTO requestDto){
         StoreResponseDTO response = storeService.createStore(requestDto);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MANAGER') and @ownerChecker.isStoreManager(#id, authentication))")
     @GetMapping("/{id}")
     public ResponseEntity<StoreResponseDTO> getStoreById(@PathVariable Integer id){
         return new ResponseEntity<>(storeService.getStoreById(id), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping
     public ResponseEntity<List<StoreResponseDTO>> getAllStores(){
         return new ResponseEntity<>(storeService.getAllStores(), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteStore(@PathVariable Integer id){
         storeService.deleteStore(id);
