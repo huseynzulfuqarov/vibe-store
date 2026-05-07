@@ -1,6 +1,7 @@
 package com.example.vibe_store.service.impl;
 
 import com.example.vibe_store.dto.auth.*;
+import com.example.vibe_store.entity.RefreshToken;
 import com.example.vibe_store.entity.User;
 import com.example.vibe_store.entity.employee.Employee;
 import com.example.vibe_store.enums.Role;
@@ -14,6 +15,7 @@ import com.example.vibe_store.security.TokenBlacklistService;
 import com.example.vibe_store.service.AuthService;
 import com.example.vibe_store.repository.EmployeeWorkHistoryRepository;
 import com.example.vibe_store.entity.employee.EmployeeWorkHistory;
+import com.example.vibe_store.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,6 +26,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -38,51 +42,68 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final EmployeeWorkHistoryRepository employeeWorkHistoryRepository;
     private final TokenBlacklistService blacklistService;
+    private final RefreshTokenService refreshTokenService;
 
 
     @Override
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, String deviceInfo, String ipAddress) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.userName(), request.password())
         );
 
-        CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-        String accessToken = jwtTokenProvider.generateAccessToken(customUserDetails);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(customUserDetails);
+        String accessToken = jwtTokenProvider.generateAccessToken(userDetails);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+
+        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+        refreshTokenService.create(user, refreshToken, deviceInfo, ipAddress);
+
         return new AuthResponse(accessToken, refreshToken);
     }
 
+
     @Override
-    public AuthResponse refresh(String authHeader) {
+    @Transactional
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        String rawRefreshToken = request.refreshToken();
 
-        String refreshToken = jwtTokenProvider.extractToken(authHeader);
-
-        if (!jwtTokenProvider.validateToken(refreshToken)) {
-            throw new BadCredentialsException("Invalid Refresh Token");
+        if (!jwtTokenProvider.validateToken(rawRefreshToken)) {
+            throw new BadCredentialsException("Invalid refresh token");
         }
-
-        if (!"refresh".equals(jwtTokenProvider.extractTokenType(refreshToken))) {
+        if (!"refresh".equals(jwtTokenProvider.extractTokenType(rawRefreshToken))) {
             throw new BadCredentialsException("Not a refresh token");
         }
 
-        String username = jwtTokenProvider.extractUsername(refreshToken);
-        CustomUserDetails userDetails = (CustomUserDetails) userDetailsService
-                .loadUserByUsername(username);
+       RefreshToken storedToken = refreshTokenService.validateAndGet(rawRefreshToken);
 
+        CustomUserDetails userDetails = (CustomUserDetails) userDetailsService
+                .loadUserByUsername(storedToken.getUser().getUsername());
         String newAccess = jwtTokenProvider.generateAccessToken(userDetails);
         String newRefresh = jwtTokenProvider.generateRefreshToken(userDetails);
 
-        return new AuthResponse(newAccess, newRefresh);
+        refreshTokenService.rotate(storedToken, newRefresh);
 
+        return new AuthResponse(newAccess, newRefresh);
     }
+
 
     @Override
-    public void logout(String authHeader) {
-        String token = jwtTokenProvider.extractToken(authHeader);
-        blacklistService.addToBlacklist(token);
-        log.info("User logged out with token {}", token);
+    public void logout(String accessTokenHeader, String refreshTokenRaw) {
+        String accessToken = jwtTokenProvider.extractToken(accessTokenHeader);
+        blacklistService.addToBlacklist(accessToken);
+
+        if (refreshTokenRaw != null && !refreshTokenRaw.isBlank()) {
+            try {
+                refreshTokenService.revoke(refreshTokenRaw);
+            } catch (Exception e) {
+                log.warn("Could not revoke refresh token: {}", e.getMessage());
+            }
+        }
+
+        log.info("User logged out");
     }
+
 
     @Override
     @Transactional
@@ -148,16 +169,42 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public AuthResponse googleLogin(GoogleLoginRequestDTO request) {
+    public AuthResponse googleLogin(GoogleLoginRequestDTO request,
+                                    String deviceInfo, String ipAddress) {
         Authentication authentication = authenticationManager.authenticate(
                 new GoogleAuthenticationToken(request.idToken())
         );
 
-        CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-        String accessToken = jwtTokenProvider.generateAccessToken(customUserDetails);
-        String refreshToken = jwtTokenProvider.generateRefreshToken(customUserDetails);
+        String accessToken = jwtTokenProvider.generateAccessToken(userDetails);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+
+        User user = userRepository.findByUsername(userDetails.getUsername()).orElseThrow();
+        refreshTokenService.create(user, refreshToken, deviceInfo, ipAddress);
 
         return new AuthResponse(accessToken, refreshToken);
+    }
+
+    @Override
+    public List<SessionDTO> getActiveSessions(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return refreshTokenService.listActiveSessions(user);
+    }
+
+    @Override
+    public void revokeSession(Long sessionId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        refreshTokenService.revokeSessionById(sessionId, user);
+    }
+
+    @Override
+    @Transactional
+    public void revokeAllSessions(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        refreshTokenService.revokeAllForUser(user);
     }
 }

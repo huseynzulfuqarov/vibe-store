@@ -159,6 +159,13 @@
 			<version>2.2.0</version>
 		</dependency>
 
+		<!-- User-Agent Parser (cihaz adı ucun) -->
+		<dependency>
+			<groupId>nl.basjes.parse.useragent</groupId>
+			<artifactId>yauaa</artifactId>
+			<version>8.1.1</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
