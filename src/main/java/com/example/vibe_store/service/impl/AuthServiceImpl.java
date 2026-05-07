@@ -10,6 +10,7 @@ import com.example.vibe_store.repository.UserRepository;
 import com.example.vibe_store.security.CustomUserDetails;
 import com.example.vibe_store.security.GoogleAuthenticationToken;
 import com.example.vibe_store.security.JwtTokenProvider;
+import com.example.vibe_store.security.TokenBlacklistService;
 import com.example.vibe_store.service.AuthService;
 import com.example.vibe_store.repository.EmployeeWorkHistoryRepository;
 import com.example.vibe_store.entity.employee.EmployeeWorkHistory;
@@ -36,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmployeeWorkHistoryRepository employeeWorkHistoryRepository;
+    private final TokenBlacklistService blacklistService;
 
 
     @Override
@@ -77,7 +79,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public void logout(String authHeader) {
-
+        String token = jwtTokenProvider.extractToken(authHeader);
+        blacklistService.addToBlacklist(token);
+        log.info("User logged out with token {}", token);
     }
 
     @Override

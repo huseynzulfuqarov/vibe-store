@@ -1,5 +1,6 @@
 package com.example.vibe_store.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -54,16 +55,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String extractUsername(String token) {
-
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
-    }
-
     public boolean validateToken(String token) {
 
         try {
@@ -77,40 +68,24 @@ public class JwtTokenProvider {
         }
     }
 
+    public String extractUsername(String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
     public String extractTokenType(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .get("type", String.class);
+        return extractAllClaims(token).get("type", String.class);
     }
 
     public String extractRole(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .get("role", String.class);
+        return extractAllClaims(token).get("role", String.class);
     }
 
     public Integer extractEmployeeId(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .get("employeeId", Integer.class);
+        return extractAllClaims(token).get("employeeId", Integer.class);
     }
 
     public Integer extractStoreId(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .get("storeId", Integer.class);
+        return extractAllClaims(token).get("storeId", Integer.class);
     }
 
     public String extractToken(String authHeader) {
@@ -118,5 +93,17 @@ public class JwtTokenProvider {
             throw new IllegalArgumentException("Authorization header must start with 'Bearer '");
         }
         return authHeader.substring(7);
+    }
+
+    public long extractExpiration(String token) {
+        return extractAllClaims(token).getExpiration().getTime();
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }
