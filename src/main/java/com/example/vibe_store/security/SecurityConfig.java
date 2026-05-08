@@ -28,7 +28,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configure(http))
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/api/auth/login", "/api/auth/google", "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/google", "/api/auth/refresh").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
                         .anyRequest().authenticated())

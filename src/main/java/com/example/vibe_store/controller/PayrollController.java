@@ -17,7 +17,7 @@ public class PayrollController {
 
     private final PayrollService payrollService;
 
-    @PreAuthorize("hasRole('ADMIN') or (hasRole('MANAGER') and @ownerChecker.isStoreManager(#id, authentication))")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MANAGER') and @ownerChecker.isStoreManager(#storeId, authentication))")
     @PostMapping("/store/{storeId}/calculate")
     public ResponseEntity<List<PayrollResponseDTO>> calculatePayrollForStore(
             @PathVariable Integer storeId,
