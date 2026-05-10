@@ -10,6 +10,9 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -49,6 +52,9 @@ public class RagService {
         saveVectorStore();
     }
 
+    @CircuitBreaker(name = "aiService", fallbackMethod = "fallbackAskWithRag")
+    @Retry(name = "aiService")
+    @RateLimiter(name = "aiService")
     public Map<String, String> askWithRag(String question) {
 
         if (vectorStore == null) {
@@ -77,7 +83,7 @@ public class RagService {
         String answer = chatClient.prompt()
                 .user("Kontekst:\n" + context + "\n\nSual: " + question)
                 .call()
-                .content(); //.chatResponse();
+                .content();
 
         return Map.of(
             "answer", answer,
@@ -85,6 +91,9 @@ public class RagService {
         );
     }
 
+    @CircuitBreaker(name = "aiService", fallbackMethod = "fallbackAskSimple")
+    @Retry(name = "aiService")
+    @RateLimiter(name = "aiService")
     public String askSimple(String question) {
         return chatClient.prompt()
                 .user(question)
@@ -92,12 +101,33 @@ public class RagService {
                 .content();
     }
 
+    @CircuitBreaker(name = "aiService", fallbackMethod = "fallbackAskWithTools")
+    @Retry(name = "aiService")
+    @RateLimiter(name = "aiService")
     public String askWithTools(String question) {
         return chatClient.prompt()
                 .user(question)
                 .tools(toolsConfig)
                 .call()
                 .content();
+    }
+
+    public Map<String, String> fallbackAskWithRag(String question, Throwable t) {
+        log.error("Fallback askWithRag triggered. Error: {}", t.getMessage());
+        return Map.of(
+                "answer", "AI service is currently unavailable. Please try again later.",
+                "context", "System error: " + t.getClass().getSimpleName()
+        );
+    }
+
+    public String fallbackAskSimple(String question, Throwable t) {
+        log.error("Fallback askSimple triggered. Error: {}", t.getMessage());
+        return "AI service is currently unavailable. Please try again later.";
+    }
+
+    public String fallbackAskWithTools(String question, Throwable t) {
+        log.error("Fallback askWithTools triggered. Error: {}", t.getMessage());
+        return "AI service is currently unavailable. Please try again later.";
     }
 
     private void saveVectorStore() {
