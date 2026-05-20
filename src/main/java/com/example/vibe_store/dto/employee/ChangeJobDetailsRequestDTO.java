@@ -2,20 +2,16 @@ package com.example.vibe_store.dto.employee;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.Setter;
+
 import java.math.BigDecimal;
 
-@Getter
-@Setter
-public class ChangeJobDetailsRequestDTO {
+public record ChangeJobDetailsRequestDTO(
+        @NotNull(message = "Employee ID cannot be empty")
+        Integer employeeId,
 
-    @NotNull(message = "Employee ID cannot be empty")
-    private Integer employeeId;
+        Integer targetStoreId,
+        Integer targetPositionId,
 
-    private Integer targetStoreId;
-    private Integer targetPositionId;
-
-    @DecimalMin(value = "370", message = "Salary cannot be less than 370 azn")
-    private BigDecimal newSalary;
-}
+        @DecimalMin(value = "370", message = "Salary cannot be less than 370 azn")
+        BigDecimal newSalary
+) {}

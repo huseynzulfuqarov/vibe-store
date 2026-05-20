@@ -1,27 +1,22 @@
 package com.example.vibe_store.dto.grade;
 
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Getter
-@Setter
-public class AssignGradeRequestDTO {
+public record AssignGradeRequestDTO(
+        @NotNull(message = "Grade ID must be provided")
+        Integer gradeId, // for old grade, set date in service and mark as inactive
+                         // if there is an active one, throw an error
 
-    @NotNull(message = "Grade ID must be provided")
-    private Integer gradeId; // for old grade, set date in service and mark as inactive
-                             // if there is an active one, throw an error
+        Integer storeId,
 
-    private Integer storeId;
+        List<Integer> employeeIds,
 
-    private List<Integer> employeeIds;
+        @NotNull(message = "Start date must be provided")
+        LocalDateTime startDate,
 
-    @NotNull(message = "Start date must be provided")
-    private LocalDateTime startDate;
-
-    @NotNull(message = "End date must be provided")
-    private LocalDateTime endDate;
-}
+        @NotNull(message = "End date must be provided")
+        LocalDateTime endDate
+) {}

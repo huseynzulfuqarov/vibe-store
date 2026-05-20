@@ -19,7 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
+import com.example.vibe_store.mapper.EmployeeMapper;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -38,16 +38,16 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final PositionRepository positionRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ModelMapper modelMapper;
+    private final EmployeeMapper employeeMapper;
 
     @Override
     public PositionResponseDTO createPosition(CreatePositionRequestDTO requestDto) {
-        if (positionRepository.existsByPositionName(requestDto.getPositionName())) {
-            log.warn("Position name {} exists", requestDto.getPositionName());
+        if (positionRepository.existsByPositionName(requestDto.positionName())) {
+            log.warn("Position name {} exists", requestDto.positionName());
             throw new IllegalArgumentException("A position with this name already exists.");
         }
 
-        Position position = modelMapper.map(requestDto, Position.class);
+        Position position = employeeMapper.toEntity(requestDto);
         position = positionRepository.save(position);
         log.info("Position created: {}", position.getPositionName());
         return getPositionById(position.getId());
@@ -57,35 +57,35 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Transactional
     public HireEmployeeResponseDTO hireEmployee(HireEmployeeRequestDTO requestDto) {
 
-        if (employeeRepository.existsByEmail(requestDto.getEmail())) {
-            log.warn("Email {} exists", requestDto.getEmail());
+        if (employeeRepository.existsByEmail(requestDto.email())) {
+            log.warn("Email {} exists", requestDto.email());
             throw new IllegalArgumentException("An employee with this email already exists!");
         }
 
-        Store store = storeRepository.findById(requestDto.getStoreId())
-                .orElseThrow(() -> new ResourceNotFoundException("Store not found with ID: " + requestDto.getStoreId()));
+        Store store = storeRepository.findById(requestDto.storeId())
+                .orElseThrow(() -> new ResourceNotFoundException("Store not found with ID: " + requestDto.storeId()));
 
-        Position position = positionRepository.findById(requestDto.getPositionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Position not found with ID: " + requestDto.getPositionId()));
+        Position position = positionRepository.findById(requestDto.positionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Position not found with ID: " + requestDto.positionId()));
 
-        Employee employee = modelMapper.map(requestDto, Employee.class);
+        Employee employee = employeeMapper.toEntity(requestDto);
         employeeRepository.save(employee);
 
         EmployeeWorkHistory workHistory = new EmployeeWorkHistory();
         workHistory.setEmployee(employee);
         workHistory.setStore(store);
         workHistory.setPosition(position);
-        workHistory.setSalary(requestDto.getSalary());
+        workHistory.setSalary(requestDto.salary());
         workHistory.setIsActive(true);
 
         employeeWorkHistoryRepository.saveAndFlush(workHistory);
 
-        String username = generateUsername(requestDto.getEmail(), requestDto.getFirstName(), requestDto.getLastName());
+        String username = generateUsername(requestDto.email(), requestDto.firstName(), requestDto.lastName());
         String tempPassword = generateTempPassword();
 
         User user = new User();
         user.setUsername(username);
-        user.setEmail(requestDto.getEmail());
+        user.setEmail(requestDto.email());
         user.setPassword(passwordEncoder.encode(tempPassword));
         user.setRole(Role.EMPLOYEE);
         user.setEmployee(employee);
@@ -95,10 +95,11 @@ public class EmployeeServiceImpl implements EmployeeService {
                 employee.getFirstName(), employee.getLastName(),
                 position.getPositionName(), store.getStoreName(), workHistory.getSalary(), username);
 
-        HireEmployeeResponseDTO response = new HireEmployeeResponseDTO();
-        response.setEmployeeDetails(getEmployeeById(employee.getId()));
-        response.setGeneratedUsername(username);
-        response.setTemporaryPassword(tempPassword);
+        HireEmployeeResponseDTO response = new HireEmployeeResponseDTO(
+                getEmployeeById(employee.getId()),
+                username,
+                tempPassword
+        );
 
         return response;
     }
@@ -107,20 +108,20 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Transactional
     public AllEmployeeDetailsResponseDTO changeJobDetails(ChangeJobDetailsRequestDTO requestDto) {
         EmployeeWorkHistory oldWorkHistory = employeeWorkHistoryRepository
-                .findByEmployeeIdAndIsActiveTrue(requestDto.getEmployeeId())
+                .findByEmployeeIdAndIsActiveTrue(requestDto.employeeId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Active work history not found for employee: " + requestDto.getEmployeeId()));
+                        "Active work history not found for employee: " + requestDto.employeeId()));
 
-        Integer targetStoreId = requestDto.getTargetStoreId() != null
-                ? requestDto.getTargetStoreId()
+        Integer targetStoreId = requestDto.targetStoreId() != null
+                ? requestDto.targetStoreId()
                 : oldWorkHistory.getStore().getId();
 
-        Integer targetPositionId = requestDto.getTargetPositionId() != null
-                ? requestDto.getTargetPositionId()
+        Integer targetPositionId = requestDto.targetPositionId() != null
+                ? requestDto.targetPositionId()
                 : oldWorkHistory.getPosition().getId();
 
-        BigDecimal newSalary = requestDto.getNewSalary() != null
-                ? requestDto.getNewSalary()
+        BigDecimal newSalary = requestDto.newSalary() != null
+                ? requestDto.newSalary()
                 : oldWorkHistory.getSalary();
 
         boolean isStoreChanged = !oldWorkHistory.getStore().getId().equals(targetStoreId);
@@ -128,7 +129,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         boolean isSalaryChanged = oldWorkHistory.getSalary().compareTo(newSalary) != 0;
 
         if (!isStoreChanged && !isPositionChanged && !isSalaryChanged) {
-            log.warn("No changes detected for employee ID {}. Store, position, and salary are the same.", requestDto.getEmployeeId());
+            log.warn("No changes detected for employee ID {}. Store, position, and salary are the same.", requestDto.employeeId());
             throw new IllegalArgumentException("No changes detected! Employee already has these details.");
         }
 
@@ -155,7 +156,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         employeeWorkHistoryRepository.save(newWorkHistory);
         log.info("Employee {} has changed: {}", oldWorkHistory.getEmployee().getId(), newWorkHistory.getEmployee().getId());
-        return getAllEmployeeDetailsResponseDto(oldWorkHistory.getEmployee(), newWorkHistory);
+        return employeeMapper.toAllDetailsResponse(oldWorkHistory.getEmployee(), newWorkHistory);
     }
 
     @Transactional
@@ -164,20 +165,20 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee employee = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found: " + employeeId));
 
-        if (requestDto.getEmail() != null
-                && !requestDto.getEmail().equals(employee.getEmail())
-                && employeeRepository.existsByEmail(requestDto.getEmail())) {
-            log.warn("This email {} is already in use.", requestDto.getEmail());;
-            throw new AlreadyExistsException("This email is already in use: " + requestDto.getEmail());
+        if (requestDto.email() != null
+                && !requestDto.email().equals(employee.getEmail())
+                && employeeRepository.existsByEmail(requestDto.email())) {
+            log.warn("This email {} is already in use.", requestDto.email());;
+            throw new AlreadyExistsException("This email is already in use: " + requestDto.email());
         }
 
-        modelMapper.map(requestDto, employee);
+        employeeMapper.updateEntityFromRequest(requestDto, employee);
 
         Employee saved = employeeRepository.save(employee);
 
         log.info("Employee {} has changed profile information", employee.getId());
 
-        return modelMapper.map(saved, EmployeeProfileResponseDTO.class);
+        return employeeMapper.toProfileResponse(saved);
     }
 
     @Override
@@ -189,56 +190,31 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .findByEmployeeIdAndIsActiveTrue(employeeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Active work history not found for employee!"));
 
-        return getAllEmployeeDetailsResponseDto(employee, activeWorkHistory);
+        return employeeMapper.toAllDetailsResponse(employee, activeWorkHistory);
     }
 
     @Override
     public PositionResponseDTO getPositionById(Integer positionId) {
         Position position = positionRepository.findById(positionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Position not found with ID: " + positionId));
-
-        PositionResponseDTO responseDTO = new PositionResponseDTO();
-        responseDTO.setPositionId(position.getId());
-        responseDTO.setPositionName(position.getPositionName());
-        return responseDTO;
+        return employeeMapper.toResponse(position);
     }
 
     @Override
     public List<AllEmployeeDetailsResponseDTO> getAllEmployees() {
         return employeeWorkHistoryRepository.findAllByIsActiveTrue().stream()
-                .map(wh -> getAllEmployeeDetailsResponseDto(wh.getEmployee(), wh))
+                .map(wh -> employeeMapper.toAllDetailsResponse(wh.getEmployee(), wh))
                 .toList();
     }
 
     @Override
     public List<PositionResponseDTO> getAllPositions() {
         return positionRepository.findAll().stream()
-                .map(position -> {
-                    PositionResponseDTO dto = new PositionResponseDTO();
-                    dto.setPositionId(position.getId());
-                    dto.setPositionName(position.getPositionName());
-                    return dto;
-                })
+                .map(employeeMapper::toResponse)
                 .toList();
     }
 
     //======= HELPER METHOD =======
-    private AllEmployeeDetailsResponseDTO getAllEmployeeDetailsResponseDto(Employee employee, EmployeeWorkHistory activeWorkHistory) {
-        AllEmployeeDetailsResponseDTO responseDto = new AllEmployeeDetailsResponseDTO();
-
-        responseDto.setEmployeeId(employee.getId());
-        responseDto.setFirstName(employee.getFirstName());
-        responseDto.setLastName(employee.getLastName());
-        responseDto.setHireDate(activeWorkHistory.getStartDate());
-        responseDto.setTerminationDate(activeWorkHistory.getEndDate());
-        responseDto.setAge(employee.getAge());
-        responseDto.setEmail(employee.getEmail());
-        responseDto.setCurrentSalary(activeWorkHistory.getSalary());
-        responseDto.setCurrentStoreName(activeWorkHistory.getStore().getStoreName());
-        responseDto.setCurrentPositionName(activeWorkHistory.getPosition().getPositionName());
-        return responseDto;
-    }
-
     private String generateUsername(String email, String firstName, String lastName) {
         String baseUsername = email.split("@")[0].toLowerCase();
 

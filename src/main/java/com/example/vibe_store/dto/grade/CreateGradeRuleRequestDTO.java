@@ -4,32 +4,27 @@ import com.example.vibe_store.enums.TargetType;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 
-@Getter
-@Setter
-public class CreateGradeRuleRequestDTO {
+public record CreateGradeRuleRequestDTO(
+        Integer positionId,
 
-    private Integer positionId;
+        @NotNull(message = "Target type (STORE_TARGET or EMPLOYEE_TARGET) must be selected")
+        TargetType targetType,
 
-    @NotNull(message = "Target type (STORE_TARGET or EMPLOYEE_TARGET) must be selected")
-    private TargetType targetType;
+        @Positive(message = "Fixed amount must be greater than 0")
+        BigDecimal fixedAmount,
 
-    @Positive(message = "Fixed amount must be greater than 0")
-    private BigDecimal fixedAmount;
+        @PositiveOrZero
+        BigDecimal minThreshold,
 
-    @PositiveOrZero
-    private BigDecimal minThreshold;
+        @PositiveOrZero
+        BigDecimal maxThreshold,
 
-    @PositiveOrZero
-    private BigDecimal maxThreshold;
+        @Positive(message = "Percentage must be greater than 0")
+        BigDecimal percentage,
 
-    @Positive(message = "Percentage must be greater than 0")
-    private BigDecimal percentage;
-
-    @Positive(message = "Share percentage must be greater than 0")
-    private BigDecimal sharePercentage;
-}
+        @Positive(message = "Share percentage must be greater than 0")
+        BigDecimal sharePercentage
+) {}

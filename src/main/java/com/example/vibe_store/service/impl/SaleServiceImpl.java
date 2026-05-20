@@ -10,7 +10,7 @@ import com.example.vibe_store.repository.SaleRepository;
 import com.example.vibe_store.service.SaleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
+import com.example.vibe_store.mapper.SaleMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SaleServiceImpl implements SaleService {
 
     private final SaleRepository saleRepository;
-    private final ModelMapper modelMapper;
+    private final SaleMapper saleMapper;
     private final EmployeeWorkHistoryRepository workHistoryRepository;
 
     @Transactional
@@ -28,21 +28,15 @@ public class SaleServiceImpl implements SaleService {
     public SaleResponseDTO createSale(CreateSaleRequestDTO requestDTO) {
 
         EmployeeWorkHistory workHistory = workHistoryRepository
-                .findByEmployeeIdAndStoreIdAndIsActiveTrue(requestDTO.getEmployeeId(), requestDTO.getStoreId())
+                .findByEmployeeIdAndStoreIdAndIsActiveTrue(requestDTO.employeeId(), requestDTO.storeId())
                 .orElseThrow(() -> new ResourceNotFoundException("This employee does not have an active work history for this store"));
 
-        Sale sale = modelMapper.map(requestDTO, Sale.class);
+        Sale sale = saleMapper.toEntity(requestDTO);
         sale.setStore(workHistory.getStore());
         sale.setEmployee(workHistory.getEmployee());
         Sale savedSale = saleRepository.save(sale);
         log.info("New sale created with ID: {}", savedSale.getId());
 
-        SaleResponseDTO responseDTO = modelMapper.map(savedSale, SaleResponseDTO.class);
-        responseDTO.setEmployeeId(savedSale.getEmployee().getId());
-        responseDTO.setStoreId(savedSale.getStore().getId());
-        responseDTO.setSaleId(savedSale.getId());
-        responseDTO.setSaleDate(savedSale.getSalesAt());
-
-        return responseDTO;
+        return saleMapper.toResponse(savedSale);
     }
 }

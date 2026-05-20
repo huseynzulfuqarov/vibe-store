@@ -16,7 +16,7 @@ import com.example.vibe_store.service.GradeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
+import com.example.vibe_store.mapper.GradeMapper;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -35,28 +35,28 @@ public class GradeServiceImpl implements GradeService {
     private final PositionRepository positionRepository;
     private final GradeAssignmentRepository gradeAssignmentRepository;
     private final GradedEmployeeRepository gradedEmployeeRepository;
-    private final ModelMapper modelMapper;
+    private final GradeMapper gradeMapper;
 
     @Override
     @Transactional
     public GradeResponseDTO createGrade(CreateGradeRequestDTO requestDTO) {
         Grade newGrade = new Grade();
 
-        newGrade.setGradeName(requestDTO.getGradeName());
-        newGrade.setGradeType(requestDTO.getGradeType());
+        newGrade.setGradeName(requestDTO.gradeName());
+        newGrade.setGradeType(requestDTO.gradeType());
         newGrade.setIsActive(true);
 
         gradeRepository.save(newGrade);
 
-        if (requestDTO.getRules() != null && !requestDTO.getRules().isEmpty()) {
-            for (CreateGradeRuleRequestDTO ruleDto : requestDTO.getRules()) {
+        if (requestDTO.rules() != null && !requestDTO.rules().isEmpty()) {
+            for (CreateGradeRuleRequestDTO ruleDto : requestDTO.rules()) {
 
-                validateGradeRuleDependencies(requestDTO.getGradeType(), ruleDto);
+               validateGradeRuleDependencies(requestDTO.gradeType(), ruleDto);
 
                buildAndSaveGradeRule(newGrade, ruleDto);
             }
         }
-        log.info("Grade {} created successfully",  requestDTO.getGradeName());
+        log.info("Grade {} created successfully",  requestDTO.gradeName());
         return getGradeById(newGrade.getId());
     }
 
@@ -72,30 +72,30 @@ public class GradeServiceImpl implements GradeService {
         GradeRule newRule = buildAndSaveGradeRule(grade, requestDTO);
 
         log.info("GradeRule for Grade {} created successfully",  grade.getGradeName());
-        return getGradeRuleRespondDTO(newRule);
+        return gradeMapper.toResponse(newRule);
     }
 
     @Override
     @Transactional
     public void assignGradeRule(AssignGradeRequestDTO requestDTO) {
 
-        if (requestDTO.getStartDate() != null && requestDTO.getEndDate() != null
-                && !requestDTO.getStartDate().isBefore(requestDTO.getEndDate())) {
-            log.warn("Start date {} must be before end date {}", requestDTO.getStartDate(), requestDTO.getEndDate());
+        if (requestDTO.startDate() != null && requestDTO.endDate() != null
+                && !requestDTO.startDate().isBefore(requestDTO.endDate())) {
+            log.warn("Start date {} must be before end date {}", requestDTO.startDate(), requestDTO.endDate());
             throw new IllegalArgumentException("Start date must be before end date");
         }
 
-        Grade grade = gradeRepository.findById(requestDTO.getGradeId())
+        Grade grade = gradeRepository.findById(requestDTO.gradeId())
                 .orElseThrow(() -> new ResourceNotFoundException("Grade not found"));
 
         GradeAssignment newGradeAssignment = new GradeAssignment();
         newGradeAssignment.setGrade(grade);
-        newGradeAssignment.setStartDate(requestDTO.getStartDate());
-        newGradeAssignment.setEndDate(requestDTO.getEndDate());
+        newGradeAssignment.setStartDate(requestDTO.startDate());
+        newGradeAssignment.setEndDate(requestDTO.endDate());
         newGradeAssignment.setIsActive(true);
 
-        if (requestDTO.getStoreId() != null) {
-            Store store = storeRepository.findById(requestDTO.getStoreId())
+        if (requestDTO.storeId() != null) {
+            Store store = storeRepository.findById(requestDTO.storeId())
                     .orElseThrow(() -> new ResourceNotFoundException("Store not found"));
 
             newGradeAssignment.setStore(store);
@@ -111,8 +111,8 @@ public class GradeServiceImpl implements GradeService {
         GradeAssignment savedAssignment = gradeAssignmentRepository.save(newGradeAssignment);
         log.info("GradeAssignment for Grade {} created successfully", grade.getGradeName());
 
-        if (requestDTO.getEmployeeIds() != null && !requestDTO.getEmployeeIds().isEmpty()) {
-            for (Integer employeeId : requestDTO.getEmployeeIds()) {
+        if (requestDTO.employeeIds() != null && !requestDTO.employeeIds().isEmpty()) {
+            for (Integer employeeId : requestDTO.employeeIds()) {
                 Employee employee = employeeRepository.findById(employeeId)
                         .orElseThrow(() -> new ResourceNotFoundException("Employee not found"));
 
@@ -142,18 +142,8 @@ public class GradeServiceImpl implements GradeService {
     }
 
     private GradeResponseDTO mapGradeToResponse(Grade grade) {
-        GradeResponseDTO responseDTO = modelMapper.map(grade, GradeResponseDTO.class);
-        responseDTO.setGradeId(grade.getId());
-
         List<GradeRule> rules = gradeRuleRepository.findAllByGradeId(grade.getId());
-
-        List<GradeRuleRespondDTO> ruleDtos = rules.stream()
-                .map(this::getGradeRuleRespondDTO)
-                .toList();
-
-        responseDTO.setRules(ruleDtos);
-
-        return responseDTO;
+        return gradeMapper.toResponse(grade, rules);
     }
 
     @Override
@@ -161,7 +151,7 @@ public class GradeServiceImpl implements GradeService {
         GradeRule gradeRule = gradeRuleRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("GradeRule not found with given id"));
 
-        return modelMapper.map(gradeRule, GradeRuleRespondDTO.class);
+        return gradeMapper.toResponse(gradeRule);
     }
 
     // ================= HELPER =================
@@ -171,16 +161,16 @@ public class GradeServiceImpl implements GradeService {
         GradeRule newRule = new GradeRule();
 
         newRule.setGrade(grade);
-        newRule.setTargetType(ruleDto.getTargetType());
-        newRule.setFixedAmount(ruleDto.getFixedAmount());
-        newRule.setMinThreshold(ruleDto.getMinThreshold());
-        newRule.setMaxThreshold(ruleDto.getMaxThreshold());
-        newRule.setPercentage(ruleDto.getPercentage());
-        newRule.setSharePercentage(ruleDto.getSharePercentage());
+        newRule.setTargetType(ruleDto.targetType());
+        newRule.setFixedAmount(ruleDto.fixedAmount());
+        newRule.setMinThreshold(ruleDto.minThreshold());
+        newRule.setMaxThreshold(ruleDto.maxThreshold());
+        newRule.setPercentage(ruleDto.percentage());
+        newRule.setSharePercentage(ruleDto.sharePercentage());
 
-        if (ruleDto.getPositionId() != null) {
-            Position position = positionRepository.findById(ruleDto.getPositionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Position not found: " + ruleDto.getPositionId()));
+        if (ruleDto.positionId() != null) {
+            Position position = positionRepository.findById(ruleDto.positionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Position not found: " + ruleDto.positionId()));
             newRule.setPosition(position);
         }
 
@@ -188,48 +178,33 @@ public class GradeServiceImpl implements GradeService {
 
         return newRule;
     }
-    private GradeRuleRespondDTO getGradeRuleRespondDTO(GradeRule savedRule) {
-        GradeRuleRespondDTO respondDTO = new GradeRuleRespondDTO();
-
-        respondDTO.setGradeId(savedRule.getGrade().getId());
-        respondDTO.setMinThreshold(savedRule.getMinThreshold());
-        respondDTO.setMaxThreshold(savedRule.getMaxThreshold());
-        respondDTO.setFixedAmount(savedRule.getFixedAmount());
-        respondDTO.setPercentage(savedRule.getPercentage());
-        respondDTO.setSharePercentage(savedRule.getSharePercentage());
-        respondDTO.setTargetType(savedRule.getTargetType());
-
-        respondDTO.setPositionName(savedRule.getPosition() != null
-                ? savedRule.getPosition().getPositionName() : null);
-        return respondDTO;
-    }
 
     private void validateGradeRuleDependencies(GradeType gradeType, CreateGradeRuleRequestDTO ruleDto) {
 
-        if (gradeType == GradeType.FIXED_GRADE && (ruleDto.getFixedAmount() == null || ruleDto.getFixedAmount().compareTo(BigDecimal.ZERO) <= 0)) {
+        if (gradeType == GradeType.FIXED_GRADE && (ruleDto.fixedAmount() == null || ruleDto.fixedAmount().compareTo(BigDecimal.ZERO) <= 0)) {
             throw new IllegalArgumentException("For FIXED_GRADE, 'fixedAmount' must be provided and greater than 0.");
         }
 
         if (gradeType == GradeType.PERCENT_GRADE || gradeType == GradeType.GRADE_THRESHOLD) {
-            if (ruleDto.getPercentage() == null || ruleDto.getPercentage().compareTo(BigDecimal.ZERO) <= 0) {
+            if (ruleDto.percentage() == null || ruleDto.percentage().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException(gradeType + " requires a valid 'percentage' value.");
             }
 
-            if (ruleDto.getTargetType() == TargetType.STORE_TOTAL_SALES &&
-                    (ruleDto.getSharePercentage() == null || ruleDto.getSharePercentage().compareTo(BigDecimal.ZERO) <= 0)) {
+            if (ruleDto.targetType() == TargetType.STORE_TOTAL_SALES &&
+                    (ruleDto.sharePercentage() == null || ruleDto.sharePercentage().compareTo(BigDecimal.ZERO) <= 0)) {
                 throw new IllegalArgumentException("When bonus is based on store total sales, 'sharePercentage' must be provided.");
             }
         }
 
         if (gradeType == GradeType.GRADE_THRESHOLD) {
-            if (ruleDto.getMinThreshold() == null && ruleDto.getMaxThreshold() == null) {
+            if (ruleDto.minThreshold() == null && ruleDto.maxThreshold() == null) {
                 throw new IllegalArgumentException("GRADE_THRESHOLD requires at least one limit (min or max threshold).");
             }
         }
 
         // for all grade types: if both min and max are set, min must be less than max
-        if (ruleDto.getMinThreshold() != null && ruleDto.getMaxThreshold() != null &&
-                ruleDto.getMinThreshold().compareTo(ruleDto.getMaxThreshold()) >= 0) {
+        if (ruleDto.minThreshold() != null && ruleDto.maxThreshold() != null &&
+                ruleDto.minThreshold().compareTo(ruleDto.maxThreshold()) >= 0) {
             throw new IllegalArgumentException("'minThreshold' must be less than 'maxThreshold'.");
         }
     }

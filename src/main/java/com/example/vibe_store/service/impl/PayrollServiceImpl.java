@@ -25,6 +25,8 @@ import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+import com.example.vibe_store.mapper.PayrollMapper;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -36,6 +38,7 @@ public class PayrollServiceImpl implements PayrollService {
     private final GradeRepository gradeRepository;
     private final EmployeeMonthlyBonusRepository employeeMonthlyBonusRepository;
     private final BonusCalculationService bonusCalculationService;
+    private final PayrollMapper payrollMapper;
 
     @Override
     @Transactional
@@ -86,13 +89,13 @@ public class PayrollServiceImpl implements PayrollService {
             Optional<Payroll> existingPayroll = payrollRepository.findByEmployeeIdAndPayrollMonthAndStoreId(employeeId, monthStr, storeId);
             if (existingPayroll.isPresent()) {
                 log.debug("Existing payroll found for employeeId={}, skipping", employeeId);
-                results.add(mapToResponseDTO(existingPayroll.get()));
+                results.add(payrollMapper.toResponse(existingPayroll.get()));
                 continue;
             }
 
             Store store = history.getStore();
             Payroll payroll = calculateAndBuildPayroll(targetMonth, monthStr, history, employee, store, storeBonuses, personalBonuses);
-            results.add(mapToResponseDTO(payrollRepository.save(payroll)));
+            results.add(payrollMapper.toResponse(payrollRepository.save(payroll)));
 
             log.info("Payroll saved for employeeId={}, storeId={}, totalAmount={}",
                     employeeId, storeId, payroll.getTotalAmount());
@@ -136,7 +139,7 @@ public class PayrollServiceImpl implements PayrollService {
             Optional<Payroll> existingPayroll = payrollRepository.findByEmployeeIdAndPayrollMonthAndStoreId(employeeId, monthStr, storeId);
             if (existingPayroll.isPresent()) {
                 log.debug("Existing payroll found for employeeId={}, storeId={}, skipping", employeeId, storeId);
-                results.add(mapToResponseDTO(existingPayroll.get()));
+                results.add(payrollMapper.toResponse(existingPayroll.get()));
                 continue;
             }
 
@@ -151,7 +154,7 @@ public class PayrollServiceImpl implements PayrollService {
                     : Collections.emptyMap();
 
             Payroll payroll = calculateAndBuildPayroll(targetMonth, monthStr, history, employee, store, storeBonuses, personalBonuses);
-            results.add(mapToResponseDTO(payrollRepository.save(payroll)));
+            results.add(payrollMapper.toResponse(payrollRepository.save(payroll)));
 
             log.info("Payroll saved for employeeId ={}, storeId={}, totalAmount={}",
                     employeeId, storeId, payroll.getTotalAmount());
@@ -242,22 +245,22 @@ public class PayrollServiceImpl implements PayrollService {
         for (BonusDetail bonusDetail : allBonusDetails) {
 
             log.trace("Applying bonus -> employeeId={}, gradeId={}, amount={}",
-                    employeeId, bonusDetail.getGradeId(), bonusDetail.getBonusAmount());
+                    employeeId, bonusDetail.gradeId(), bonusDetail.bonusAmount());
 
-            totalBonus = totalBonus.add(bonusDetail.getBonusAmount());
+            totalBonus = totalBonus.add(bonusDetail.bonusAmount());
 
             details.append(String.format("%s bonusu: %.2f AZN. ",
-                    bonusDetail.getGradeName(), bonusDetail.getBonusAmount()));
+                    bonusDetail.gradeName(), bonusDetail.bonusAmount()));
 
-            Grade grade = gradeRepository.findById(bonusDetail.getGradeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Grade not found: " + bonusDetail.getGradeId()));
+            Grade grade = gradeRepository.findById(bonusDetail.gradeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Grade not found: " + bonusDetail.gradeId()));
 
             EmployeeMonthlyBonus monthlyBonus = new EmployeeMonthlyBonus();
             monthlyBonus.setEmployee(employee);
             monthlyBonus.setGrade(grade);
             monthlyBonus.setStore(store);
             monthlyBonus.setPayrollMonth(monthStr);
-            monthlyBonus.setBonusAmount(bonusDetail.getBonusAmount());
+            monthlyBonus.setBonusAmount(bonusDetail.bonusAmount());
             employeeMonthlyBonusRepository.save(monthlyBonus);
         }
 
@@ -279,22 +282,5 @@ public class PayrollServiceImpl implements PayrollService {
         payroll.setTotalAmount(totalAmount);
         payroll.setCalculationDetails(details);
         return payroll;
-    }
-
-    private PayrollResponseDTO mapToResponseDTO(Payroll payroll) {
-
-        log.trace("Mapping payroll to DTO for employeeId={}", payroll.getEmployee().getId());
-
-        PayrollResponseDTO dto = new PayrollResponseDTO();
-        dto.setPayrollId(payroll.getId());
-        dto.setEmployeeId(payroll.getEmployee().getId());
-        dto.setEmployeeName(payroll.getEmployee().getFirstName() + " " + payroll.getEmployee().getLastName());
-        dto.setStoreName(payroll.getStore().getStoreName());
-        dto.setBaseSalary(payroll.getBaseSalary());
-        dto.setBonusAmount(payroll.getBonusAmount());
-        dto.setTotalAmount(payroll.getTotalAmount());
-        dto.setCalculationDetails(payroll.getCalculationDetails());
-        dto.setCreatedAt(payroll.getCreatedAt());
-        return dto;
     }
 }

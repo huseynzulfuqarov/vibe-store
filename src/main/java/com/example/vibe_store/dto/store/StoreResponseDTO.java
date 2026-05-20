@@ -1,17 +1,11 @@
 package com.example.vibe_store.dto.store;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
-public class StoreResponseDTO {
-
-    private Integer storeId;
-    private String storeName;
-    private String storeAddress;
-    private String warehouseName;
-    private LocalDateTime creationDate;
-}
+public record StoreResponseDTO(
+        Integer storeId,
+        String storeName,
+        String storeAddress,
+        String warehouseName,
+        LocalDateTime creationDate
+) {}

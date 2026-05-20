@@ -1,18 +1,12 @@
 package com.example.vibe_store.dto.sale;
 
-import lombok.Getter;
-import lombok.Setter;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
-public class SaleResponseDTO {
-
-    private Long saleId;
-    private Integer employeeId;
-    private Integer storeId;
-    private BigDecimal saleAmount;
-    private LocalDateTime saleDate;
-}
+public record SaleResponseDTO(
+        Long saleId,
+        Integer employeeId,
+        Integer storeId,
+        BigDecimal saleAmount,
+        LocalDateTime saleDate
+) {}

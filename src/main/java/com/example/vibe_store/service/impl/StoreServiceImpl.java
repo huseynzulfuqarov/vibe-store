@@ -9,7 +9,7 @@ import com.example.vibe_store.repository.StoreRepository;
 import com.example.vibe_store.repository.WarehouseRepository;
 import com.example.vibe_store.service.StoreService;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
+import com.example.vibe_store.mapper.StoreMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,37 +21,30 @@ public class StoreServiceImpl implements StoreService {
 
     private final StoreRepository storeRepository;
     private final WarehouseRepository warehouseRepository;
-    private final ModelMapper modelMapper;
+    private final StoreMapper storeMapper;
 
     @Transactional
     @Override
     public StoreResponseDTO createStore(CreateStoreRequestDTO requestDto) {
-        Warehouse warehouse = warehouseRepository.findById(requestDto.getWarehouseId())
-                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found with ID: " + requestDto.getWarehouseId()));
-        Store store = new Store();
-        modelMapper.map(requestDto, store);
+        Warehouse warehouse = warehouseRepository.findById(requestDto.warehouseId())
+                .orElseThrow(() -> new ResourceNotFoundException("Warehouse not found with ID: " + requestDto.warehouseId()));
+        Store store = storeMapper.toEntity(requestDto);
         store.setWarehouse(warehouse);
-        return modelMapper.map(storeRepository.save(store), StoreResponseDTO.class);
+        return storeMapper.toResponse(storeRepository.save(store));
     }
 
     @Override
     public StoreResponseDTO getStoreById(Integer id) {
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Store not found with ID: " + id));
-        StoreResponseDTO dto = modelMapper.map(store, StoreResponseDTO.class);
-        dto.setStoreId(store.getId());
-        return dto;
+        return storeMapper.toResponse(store);
     }
 
     @Override
     public List<StoreResponseDTO> getAllStores() {
         List<Store> stores = storeRepository.findAllWithWarehouse();
         return stores.stream()
-                .map(store -> {
-                    StoreResponseDTO dto = modelMapper.map(store, StoreResponseDTO.class);
-                    dto.setStoreId(store.getId());
-                    return dto;
-                })
+                .map(storeMapper::toResponse)
                 .toList();
     }
 
