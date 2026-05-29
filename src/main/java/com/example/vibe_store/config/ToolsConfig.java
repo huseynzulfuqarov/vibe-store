@@ -83,7 +83,7 @@ public class ToolsConfig {
         }
 
         Store store = storeOpt.get();
-        long employeeCount = workHistoryRepository.findAllActiveByStoreId(store.getId()).size();
+        long employeeCount = workHistoryRepository.findAllActiveByStoreIdWithDetails(store.getId()).size();
 
         return String.format("Mağaza: %s, Ünvan: %s, Aktiv işçi sayı: %d",
                 store.getStoreName(),

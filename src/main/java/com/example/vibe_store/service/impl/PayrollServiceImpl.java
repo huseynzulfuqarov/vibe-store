@@ -61,7 +61,7 @@ public class PayrollServiceImpl implements PayrollService {
 
         //target ayda bu magazada islemis ve ya hazirda isleyen butun isciler
         List<EmployeeWorkHistory> histories =
-                workHistoryRepository.findAllWorkedInStoreAndMonth(storeId, monthStart, monthEnd);
+                workHistoryRepository.findAllWorkedInStoreAndMonthWithDetails(storeId, monthStart, monthEnd);
 
         log.debug("Found {} employees for storeId={}, month={}", histories.size(), storeId, monthStr);
 
@@ -118,7 +118,7 @@ public class PayrollServiceImpl implements PayrollService {
         String monthStr = targetMonth.toString();
 
         List<EmployeeWorkHistory> histories =
-                workHistoryRepository.findAllByEmployeeIdAndMonth(employeeId, monthStart, monthEnd);
+                workHistoryRepository.findAllByEmployeeIdAndMonthWithDetails(employeeId, monthStart, monthEnd);
 
         log.debug("Found {} work history records for employeeId={}, month={}",
                 histories.size(), employeeId, monthStr);

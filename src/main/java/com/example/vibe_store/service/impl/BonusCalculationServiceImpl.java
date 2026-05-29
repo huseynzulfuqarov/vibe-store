@@ -13,6 +13,7 @@ import com.example.vibe_store.service.BonusCalculationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class BonusCalculationServiceImpl implements BonusCalculationService {
 
     private final EmployeeWorkHistoryRepository employeeWorkHistoryRepository;
@@ -38,7 +40,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
         LocalDateTime startOfMonth = targetMonth.atDay(1).atStartOfDay();
         LocalDateTime endOfMonth = targetMonth.atEndOfMonth().atTime(23, 59, 59);
 
-        List<EmployeeWorkHistory> activeHistories = employeeWorkHistoryRepository.findAllActiveByStoreId(storeId);
+        List<EmployeeWorkHistory> activeHistories = employeeWorkHistoryRepository.findAllActiveByStoreIdWithDetails(storeId);
 
         if (activeHistories.isEmpty()) {
             return Collections.emptyMap();
@@ -94,7 +96,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                                         Map<Integer, List<BonusDetail>> employeeBonuses) {
 
         GradeType gradeType = assignment.getGrade().getGradeType();
-        List<GradeRule> rules = gradeRuleRepo.findAllByGradeId(assignment.getGrade().getId());
+        List<GradeRule> rules = gradeRuleRepo.findAllByGradeIdWithPosition(assignment.getGrade().getId());
 
         LocalDateTime gradeStart = assignment.getStartDate();
         LocalDateTime gradeEnd = assignment.getEndDate();
@@ -103,7 +105,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
 
         if (!isStoreTargetMet(rules, storeTotalSales)) return;
 
-        List<GradedEmployee> gradedEmployees = gradedEmployeeRepo.findAllByGradeAssignmentId(assignment.getId());
+        List<GradedEmployee> gradedEmployees = gradedEmployeeRepo.findAllByGradeAssignmentIdWithEmployee(assignment.getId());
         List<EmployeeWorkHistory> eligibleEmployees = getEligibleEmployees(gradedEmployees, activeHistories);
 
         if (eligibleEmployees.isEmpty()) return;
@@ -160,7 +162,7 @@ public class BonusCalculationServiceImpl implements BonusCalculationService {
                                              Map<Integer, List<BonusDetail>> employeeBonuses) {
 
         GradeType gradeType = assignment.getGrade().getGradeType();
-        List<GradeRule> rules = gradeRuleRepo.findAllByGradeId(assignment.getGrade().getId());
+        List<GradeRule> rules = gradeRuleRepo.findAllByGradeIdWithPosition(assignment.getGrade().getId());
 
         LocalDateTime gradeStart = assignment.getStartDate();
         LocalDateTime gradeEnd = assignment.getEndDate();

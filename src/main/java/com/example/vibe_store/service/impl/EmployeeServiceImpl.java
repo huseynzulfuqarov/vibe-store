@@ -16,6 +16,8 @@ import com.example.vibe_store.repository.PositionRepository;
 import com.example.vibe_store.repository.StoreRepository;
 import com.example.vibe_store.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +26,12 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
@@ -40,6 +42,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final PasswordEncoder passwordEncoder;
     private final EmployeeMapper employeeMapper;
 
+    @Transactional
     @Override
     public PositionResponseDTO createPosition(CreatePositionRequestDTO requestDto) {
         if (positionRepository.existsByPositionName(requestDto.positionName())) {
@@ -183,14 +186,17 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     public AllEmployeeDetailsResponseDTO getEmployeeById(Integer employeeId) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Employee not found with ID: " + employeeId));
-
         EmployeeWorkHistory activeWorkHistory = employeeWorkHistoryRepository
-                .findByEmployeeIdAndIsActiveTrue(employeeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Active work history not found for employee!"));
+                .findByEmployeeIdAndIsActiveTrueWithDetails(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Active work history not found for employee: " + employeeId));
 
-        return employeeMapper.toAllDetailsResponse(employee, activeWorkHistory);
+        return employeeMapper.toAllDetailsResponse(activeWorkHistory.getEmployee(), activeWorkHistory);
+    }
+
+    @Override
+    public Page<AllEmployeeDetailsResponseDTO> getAllEmployees(Pageable pageable) {
+        return employeeWorkHistoryRepository.findAllActiveWithDetails(pageable)
+                .map(wh -> employeeMapper.toAllDetailsResponse(wh.getEmployee(), wh));
     }
 
     @Override
@@ -201,17 +207,9 @@ public class EmployeeServiceImpl implements EmployeeService {
     }
 
     @Override
-    public List<AllEmployeeDetailsResponseDTO> getAllEmployees() {
-        return employeeWorkHistoryRepository.findAllByIsActiveTrue().stream()
-                .map(wh -> employeeMapper.toAllDetailsResponse(wh.getEmployee(), wh))
-                .toList();
-    }
-
-    @Override
-    public List<PositionResponseDTO> getAllPositions() {
-        return positionRepository.findAll().stream()
-                .map(employeeMapper::toResponse)
-                .toList();
+    public Page<PositionResponseDTO> getAllPositions(Pageable pageable) {
+        return positionRepository.findAll(pageable)
+                .map(employeeMapper::toResponse);
     }
 
     //======= HELPER METHOD =======

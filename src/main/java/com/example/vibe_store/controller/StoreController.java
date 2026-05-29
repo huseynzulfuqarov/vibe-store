@@ -5,12 +5,12 @@ import com.example.vibe_store.dto.store.StoreResponseDTO;
 import com.example.vibe_store.service.StoreService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/stores")
@@ -34,8 +34,8 @@ public class StoreController {
 
     @PreAuthorize("hasAnyRole('ADMIN')")
     @GetMapping
-    public ResponseEntity<List<StoreResponseDTO>> getAllStores(){
-        return new ResponseEntity<>(storeService.getAllStores(), HttpStatus.OK);
+    public ResponseEntity<Page<StoreResponseDTO>> getAllStores(Pageable pageable){
+        return new ResponseEntity<>(storeService.getAllStores(pageable), HttpStatus.OK);
     }
 
     @PreAuthorize("hasRole('ADMIN')")

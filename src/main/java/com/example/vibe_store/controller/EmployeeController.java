@@ -4,12 +4,12 @@ import com.example.vibe_store.dto.employee.*;
 import com.example.vibe_store.service.EmployeeService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/employees")
@@ -52,8 +52,8 @@ public class EmployeeController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping
-    public ResponseEntity<List<AllEmployeeDetailsResponseDTO>> getAllEmployees() {
-        return new ResponseEntity<>(employeeService.getAllEmployees(), HttpStatus.OK);
+    public ResponseEntity<Page<AllEmployeeDetailsResponseDTO>> getAllEmployees(Pageable pageable) {
+        return new ResponseEntity<>(employeeService.getAllEmployees(pageable), HttpStatus.OK);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
@@ -64,7 +64,7 @@ public class EmployeeController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     @GetMapping("/positions")
-    public ResponseEntity<List<PositionResponseDTO>> getAllPositions() {
-        return new ResponseEntity<>(employeeService.getAllPositions(), HttpStatus.OK);
+    public ResponseEntity<Page<PositionResponseDTO>> getAllPositions(Pageable pageable) {
+        return new ResponseEntity<>(employeeService.getAllPositions(pageable), HttpStatus.OK);
     }
 }

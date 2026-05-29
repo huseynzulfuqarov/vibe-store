@@ -13,6 +13,7 @@ public interface GradeAssignmentRepository extends JpaRepository<GradeAssignment
     Optional<GradeAssignment> findByStoreIdAndIsActiveTrue(Integer id);
 
     @Query("SELECT ga FROM GradeAssignment ga " +
+            "JOIN FETCH ga.grade " +
             "WHERE ga.store.id = :storeId " +
             "AND ga.isActive = true " +
             "AND ga.endDate >= :startOfMonth AND ga.endDate <= :endOfMonth")
@@ -23,6 +24,7 @@ public interface GradeAssignmentRepository extends JpaRepository<GradeAssignment
     );
 
     @Query("SELECT ga FROM GradeAssignment ga " +
+            "JOIN FETCH ga.grade " +
             "JOIN GradedEmployee ge ON ge.gradeAssignment.id = ga.id " +
             "WHERE ga.store IS NULL " +
             "AND ge.employee.id = :employeeId " +

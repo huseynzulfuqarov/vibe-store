@@ -14,6 +14,8 @@ import com.example.vibe_store.exception.ResourceNotFoundException;
 import com.example.vibe_store.repository.*;
 import com.example.vibe_store.service.GradeService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import com.example.vibe_store.mapper.GradeMapper;
@@ -26,6 +28,7 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class GradeServiceImpl implements GradeService {
 
     private final GradeRepository gradeRepository;
@@ -135,14 +138,13 @@ public class GradeServiceImpl implements GradeService {
     }
 
     @Override
-    public List<GradeResponseDTO> getAllGrades() {
-        return gradeRepository.findAll().stream()
-                .map(this::mapGradeToResponse)
-                .toList();
+    public Page<GradeResponseDTO> getAllGrades(Pageable pageable) {
+        return gradeRepository.findAll(pageable)
+                .map(this::mapGradeToResponse);
     }
 
     private GradeResponseDTO mapGradeToResponse(Grade grade) {
-        List<GradeRule> rules = gradeRuleRepository.findAllByGradeId(grade.getId());
+        List<GradeRule> rules = gradeRuleRepository.findAllByGradeIdWithPosition(grade.getId());
         return gradeMapper.toResponse(grade, rules);
     }
 

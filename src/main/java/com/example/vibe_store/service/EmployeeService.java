@@ -1,8 +1,8 @@
 package com.example.vibe_store.service;
 
 import com.example.vibe_store.dto.employee.*;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface EmployeeService {
 
@@ -16,9 +16,9 @@ public interface EmployeeService {
 
     AllEmployeeDetailsResponseDTO getEmployeeById(Integer employeeId);
 
-    List<AllEmployeeDetailsResponseDTO> getAllEmployees();
+    Page<AllEmployeeDetailsResponseDTO> getAllEmployees(Pageable pageable);
 
     PositionResponseDTO getPositionById(Integer positionId);
 
-    List<PositionResponseDTO> getAllPositions();
+    Page<PositionResponseDTO> getAllPositions(Pageable pageable);
 }

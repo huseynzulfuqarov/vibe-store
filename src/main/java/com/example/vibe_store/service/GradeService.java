@@ -1,8 +1,8 @@
 package com.example.vibe_store.service;
 
 import com.example.vibe_store.dto.grade.*;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface GradeService {
 
@@ -14,7 +14,7 @@ public interface GradeService {
 
     GradeResponseDTO getGradeById(Integer id);
 
-    List<GradeResponseDTO> getAllGrades();
+    Page<GradeResponseDTO> getAllGrades(Pageable pageable);
 
     GradeRuleRespondDTO  getGradeRuleById(Integer id);
 }
