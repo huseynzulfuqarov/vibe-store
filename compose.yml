@@ -4,7 +4,7 @@ services:
     image: mysql:8.0
     container_name: mysql-db
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: mydatabase
     ports:
       - "3307:3306"
@@ -22,8 +22,8 @@ services:
     build: .
     environment:
         DB_URL: jdbc:mysql://mysql-db/mydatabase
-        DB_USERNAME: root
-        DB_PASSWORD: rootpassword
+        DB_USERNAME: ${DB_USERNAME}
+        DB_PASSWORD: ${DB_PASSWORD}
     container_name: vibe-store
     ports:
       - "8080:8080"
