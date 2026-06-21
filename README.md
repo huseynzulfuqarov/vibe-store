@@ -1,79 +1,168 @@
 # vibe-store
 
-A Spring Boot REST API for managing retail store operations, employee lifecycle, 
-and an automated bonus/payroll calculation engine.
+Backend for a multi-store retail management system. Handles employee lifecycle,
+payroll with bonus calculations, sales tracking, and has a built-in AI assistant
+powered by Spring AI + Gemini.
 
-## Overview
+## What it does
 
-vibe-store is a backend system built for companies that operate multiple retail 
-stores under a warehouse hierarchy. It handles everything from hiring employees 
-and tracking job transfers to calculating monthly payroll with a flexible, 
-rule-based bonus system.
+The system is designed for companies that run multiple retail stores under
+a warehouse structure. Main things it covers:
 
-## Features
+- Hiring employees, assigning them to stores/positions, tracking transfers
+- Recording sales per employee and calculating monthly payroll
+- A flexible bonus engine with fixed, percentage, and threshold-based strategies
+- JWT-based auth with refresh token rotation and Google OAuth support
+- An AI assistant that can answer questions from uploaded docs (RAG) or
+  pull live data from the database using function calling
 
-- **Store & Warehouse Management** — Create and manage stores linked to a 
-  warehouse and company hierarchy
-- **Employee Management** — Hire employees, assign positions, track salary 
-  changes and store transfers via work history
-- **Sales Tracking** — Record sales per employee per store with validation 
-  against active work history
-- **Grade & Bonus System** — Define reusable bonus grades with three strategies:
-  - `FIXED_GRADE` — flat bonus amount per employee
-  - `PERCENT_GRADE` — percentage of individual or store-wide sales
-  - `GRADE_THRESHOLD` — tiered percentage bonuses within sales ranges
-- **Payroll Calculation** — Monthly payroll per store or per employee, 
-  with prorated salary based on days worked and automatic bonus aggregation. 
-  Handles mid-month store transfers correctly.
-- **AI Assistant (RAG & Function Calling)** — Integrated Spring AI with Gemini 
-  to answer queries based on custom documents (RAG) and execute database 
-  lookups (Store info, Employee salaries, Sales) via function calling.
+## Tech stack
 
-## Tech Stack
-
-- Java 21
-- Spring Boot
-- Spring Data JPA / Hibernate
-- Spring AI (Google GenAI, Vector Store)
-- MySQL
+- Java 21, Spring Boot 4
+- Spring Security + JWT (jjwt) + Redis for token blacklisting
+- Spring Data JPA / Hibernate, MySQL
+- Spring AI with Google Gemini + local ONNX embeddings
+- Bucket4j (rate limiting), Resilience4j (circuit breaker, retry)
+- MapStruct, Lombok, Jakarta Validation
 - Docker & Docker Compose
-- ModelMapper
-- Lombok
-- Jakarta Validation
+- Swagger / OpenAPI (springdoc)
 
-## API Endpoints
+## Auth & security
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/stores` | Create a store |
-| GET | `/api/stores` | Get all stores |
-| GET | `/api/stores/{id}` | Get store by ID |
-| DELETE | `/api/stores/{id}` | Delete a store |
-| POST | `/api/employees` | Hire an employee |
-| GET | `/api/employees` | Get all employees |
-| GET | `/api/employees/{id}` | Get employee by ID |
-| PATCH | `/api/employees/{id}/profile` | Update employee profile |
-| POST | `/api/employees/changeJobDetails` | Transfer or update job details |
-| POST | `/api/employees/positions` | Create a position |
-| GET | `/api/employees/positions` | Get all positions |
-| GET | `/api/employees/positions/{id}` | Get position by ID |
-| POST | `/api/grades` | Create a grade |
-| GET | `/api/grades` | Get all grades |
-| GET | `/api/grades/{id}` | Get grade by ID |
-| POST | `/api/grades/{id}/rules` | Add a rule to a grade |
-| POST | `/api/grades/assign` | Assign a grade to a store or employee |
-| POST | `/api/sales` | Record a sale |
-| POST | `/api/payroll/store/{storeId}/calculate` | Calculate payroll for a store |
-| POST | `/api/payroll/employee/{employeeId}/calculate` | Calculate payroll for an employee |
-| POST | `/api/ai/documents` | Add documents to Vector Store |
-| POST | `/api/ai/ask` | Ask question using RAG |
-| GET | `/api/ai/ask/simple` | Ask question directly to Gemini |
-| POST | `/api/ai/ask/with-tools` | Ask question using Function Calling |
+Authentication is stateless JWT. On login you get an access token (15min)
+and a refresh token (7 days). Refresh tokens are stored in DB as SHA-256
+hashes with device info and IP — supports rotation and reuse detection.
+If a used refresh token is submitted again, all sessions for that user
+get revoked.
 
-## Run with Docker
+Google OAuth is also supported — send the Google ID token to `/api/auth/google`
+and the backend verifies it, creates/finds the user, and returns JWT tokens.
 
-To run the application and MySQL database in containers:
+Role-based access: `ADMIN`, `MANAGER`, `EMPLOYEE`. Controllers are protected
+with `@PreAuthorize` — admins can do everything, managers can see their own
+store's data, employees can view/update their own profile.
+
+Token blacklisting on logout via Redis with TTL matching the token's
+remaining lifetime.
+
+## Rate limiting
+
+Three tiers, all in-memory with Bucket4j:
+
+| Tier | Endpoints | Limit |
+|------|-----------|-------|
+| Auth | `/auth/login`, `/auth/google`, `/auth/refresh` | 5 req/min per IP |
+| AI | `/api/ai/**` | 10 req/min per user |
+| General | everything else | 60 req/min per IP |
+
+## Fault tolerance
+
+AI endpoints are wrapped with Resilience4j:
+
+- **Circuit breaker** — opens after 50% failure rate over 10 calls, waits 10s
+- **Retry** — up to 3 attempts with 1s delay
+- **Rate limiter** — 20 calls/min server-side
+
+All three have fallback methods that return a friendly error instead of 500.
+
+## API overview
+
+### Auth
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/auth/login` | public |
+| POST | `/api/auth/google` | public |
+| POST | `/api/auth/refresh` | public |
+| POST | `/api/auth/logout` | authenticated |
+| POST | `/api/auth/admin` | ADMIN |
+| PUT | `/api/auth/role` | ADMIN |
+| PUT | `/api/auth/password` | authenticated |
+| GET | `/api/auth/sessions` | authenticated |
+| DELETE | `/api/auth/sessions/{id}` | authenticated |
+| DELETE | `/api/auth/sessions` | authenticated |
+
+### Stores
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/stores` | ADMIN |
+| GET | `/api/stores` | ADMIN |
+| GET | `/api/stores/{id}` | ADMIN / store manager |
+| DELETE | `/api/stores/{id}` | ADMIN |
+
+### Employees
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/employees` | ADMIN |
+| GET | `/api/employees` | ADMIN, MANAGER |
+| GET | `/api/employees/{id}` | ADMIN / owner |
+| PATCH | `/api/employees/{id}/profile` | ADMIN / owner |
+| POST | `/api/employees/changeJobDetails` | ADMIN |
+| POST | `/api/employees/positions` | ADMIN |
+| GET | `/api/employees/positions` | ADMIN, MANAGER |
+| GET | `/api/employees/positions/{id}` | ADMIN, MANAGER |
+
+### Grades & payroll
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/grades` | ADMIN |
+| GET | `/api/grades` | ADMIN, MANAGER |
+| GET | `/api/grades/{id}` | ADMIN, MANAGER |
+| POST | `/api/grades/{id}/rules` | ADMIN |
+| POST | `/api/grades/assign` | ADMIN |
+| POST | `/api/sales` | authenticated |
+| POST | `/api/payroll/store/{storeId}/calculate` | ADMIN / store manager |
+| POST | `/api/payroll/employee/{id}/calculate` | ADMIN |
+
+### AI
+| Method | Endpoint | Access |
+|--------|----------|--------|
+| POST | `/api/ai/documents` | ADMIN |
+| POST | `/api/ai/ask` | authenticated |
+| GET | `/api/ai/ask/simple` | authenticated |
+| POST | `/api/ai/ask/with-tools` | authenticated |
+
+All list endpoints support pagination via `?page=0&size=20&sort=id,desc`.
+
+## Running locally
+
+You need Docker for MySQL and Redis:
 
 ```bash
 docker compose up -d
+```
+
+Then create a `.env` file in the project root:
+
+```
+DB_URL=jdbc:mysql://localhost:3307/mydatabase
+DB_USERNAME=root
+DB_PASSWORD=yourpassword
+GEMINI_API_KEY=your-gemini-key
+GOOGLE_CLIENT_ID=your-google-client-id
+JWT_SECRET=some-long-random-string-at-least-256-bits
+```
+
+Run the app:
+
+```bash
+./mvnw spring-boot:run
+```
+
+Swagger UI will be at `http://localhost:8080/swagger-ui.html`.
+
+## Project structure
+
+```
+src/main/java/com/example/vibe_store/
+├── config/          # AppConfig, AiConfig, ToolsConfig
+├── controller/      # REST controllers + auth/
+├── dto/             # Request/response records (auth, employee, grade, payroll, sale, store)
+├── entity/          # JPA entities + employee/, grade/
+├── enums/           # Role enum
+├── exception/       # GlobalExceptionHandler, custom exceptions
+├── filter/          # MdcFilter (trace ID)
+├── mapper/          # MapStruct interfaces
+├── repository/      # Spring Data JPA repos
+├── security/        # JWT, filters, OAuth, RBAC
+└── service/         # Business logic + impl/
 ```
